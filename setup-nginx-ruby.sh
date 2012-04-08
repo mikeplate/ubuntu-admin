@@ -42,10 +42,10 @@ gem install passenger
 PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/Configuration.c//')"
 
 # Download and unzip nginx
-if [ ! -d nginx ]; then
-    mkdir nginx
+if [ ! -d tmp/nginx ]; then
+    mkdir -p tmp/nginx
 fi
-cd nginx
+cd tmp/nginx
 wget http://nginx.org/download/nginx-$NGINXVER.tar.gz
 tar xvf nginx-$NGINXVER.tar.gz
 cd nginx-$NGINXVER
@@ -68,11 +68,13 @@ make
 cp objs/nginx /usr/sbin/nginx
 
 # Setup basic nginx configuration
-mkdir /etc/nginx
-chown root:root /etc/nginx
-chmod 0755 /etc/nginx
-cp conf/mime-types /etc/nginx/mime-types
-tee /etc/nginx/nginx.conf << EOF
+if [ ! -d /etc/nginx ]; then
+    mkdir /etc/nginx
+    chown root:root /etc/nginx
+    chmod 0755 /etc/nginx
+fi
+cp conf/mime.types /etc/nginx/mime.types
+tee /etc/nginx/nginx.conf > /dev/null << EOF
 user www-data;
 worker_processes 2;
 pid /var/run/nginx.pid;
@@ -104,13 +106,17 @@ EOF
 
 # Setup the nginx files environment
 mkdir -p /srv/www/default
-mkdir /var/log/nginx
-chown www-data:adm /var/log/nginx
-chmod 0750 /var/log/nginx
-mkdir /var/lib/nginx
+if [ ! -d /var/log/nginx ]; then
+    mkdir /var/log/nginx
+    chown www-data:adm /var/log/nginx
+    chmod 0750 /var/log/nginx
+fi
+if [ ! -d /var/lib/nginx ]; then
+    mkdir /var/lib/nginx
+fi
 
 # Setup the nginx service environment
-tee /etc/init/nginx << EOF
+tee /etc/init/nginx > /dev/null << EOF
 description "nginx http daemon"
 start on runlevel [2]
 stop on runlevel [016]
@@ -119,4 +125,6 @@ console owner
 exec /usr/sbin/nginx -g "daemon off;"
 respawn
 EOF
+
+echo 'Setup completed successfully'
 
