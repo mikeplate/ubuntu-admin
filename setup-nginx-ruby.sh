@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# Setup Nginx with Passenger for running Ruby and Sinatra. Tested on Ubuntu servers.
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
 
 # Determine the current stable version of nginx
 HTML="$(wget -qO- http://nginx.org/en/download.html)"
@@ -14,12 +22,6 @@ fi
 NGINXVER="${BASH_REMATCH[1]}"
 if [ ${#NGINXVER} -lt 5 ]; then
     echo "Cannot determine nginx version, number $NGINXVER is too short"
-    exit
-fi
-
-# Ensure running as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo 'This script is designed to run as root'
     exit
 fi
 
@@ -40,6 +42,20 @@ fi
 # Install Passenger and get the path to the nginx extension
 gem install passenger
 PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/Configuration.c//')"
+if [ ${#PASSENGERPATH} -lt 10 ]; then
+    echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
+    exit
+fi
+
+# Install other ruby gems
+RUBYGEMS=( sinatra sinatra-reloader sass json )
+for gemname in "${RUBYGEMS[@]}"; do
+    gem install $gemname
+    if [ $? -ne 0 ]; then
+        echo "Could not install Rubygem $gemname."
+        exit
+    fi
+done
 
 # Download and unzip nginx
 if [ ! -d tmp/nginx ]; then
@@ -52,11 +68,14 @@ cd nginx-$NGINXVER
 
 # Configure and build nginx
 ./configure \
+    --prefix=/var/lib/nginx \
+    --sbin-path=/usr/sbin/nginx \
     --conf-path=/etc/nginx/nginx.conf \
-    --error-log-path=/var/log/nginx/error.log \
     --pid-path=/var/run/nginx.pid \
-    --lock-path=/var/lock/nginx.lock \
+    --error-log-path=/var/log/nginx/error.log \
     --http-log-path=/var/log/nginx/access.log \
+    --user=www-data \
+    --lock-path=/var/lock/nginx.lock \
     --http-client-body-temp-path=/var/lib/nginx/body \
     --http-proxy-temp-path=/var/lib/nginx/proxy \
     --without-http_uwsgi_module \
@@ -105,7 +124,6 @@ http {
 EOF
 
 # Setup the nginx files environment
-mkdir -p /srv/www/default
 if [ ! -d /var/log/nginx ]; then
     mkdir /var/log/nginx
     chown www-data:adm /var/log/nginx
@@ -126,5 +144,10 @@ exec /usr/sbin/nginx -g "daemon off;"
 respawn
 EOF
 
-echo 'Setup completed successfully'
+# Create the default web site
+if [ -f ./add-nginx-ruby.sh ]; then
+    ./add-nginx-ruby.sh default \*
+fi
+
+echo 'Setup completed'
 
