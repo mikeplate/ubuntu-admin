@@ -41,7 +41,7 @@ fi
 
 # Install Passenger and get the path to the nginx extension
 gem install passenger
-PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/Configuration.c//')"
+PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/ext\/nginx\/Configuration.c//')"
 if [ ${#PASSENGERPATH} -lt 10 ]; then
     echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
     exit
@@ -82,7 +82,7 @@ cd nginx-$NGINXVER
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
-    --add-module=$PASSENGERPATH
+    --add-module=$PASSENGERPATH/ext/nginx
 make
 cp objs/nginx /usr/sbin/nginx
 
@@ -103,6 +103,11 @@ events {
 }
 
 http {
+    passenger_root $PASSENGERPATH;
+    passenger_ruby $(which ruby);
+    passenger_log_level 1;
+    passenger_debug_log_file /var/log/nginx/passenger.log;
+
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;

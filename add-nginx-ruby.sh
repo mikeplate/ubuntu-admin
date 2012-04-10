@@ -36,7 +36,7 @@ server {
     access_log /var/log/nginx/$1.access.log;
     root /srv/www/$1/public;
     passenger_enabled on;
-    # passenger_friendly_error_pages on;
+    passenger_friendly_error_pages on;
 }
 EOF
 chmod 0640 /srv/www/$1.conf
@@ -46,7 +46,7 @@ cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
 # Set file system properties correctly
 chown -R $MYUSER:www-data $DESTDIR
-chmod -R 0740 $DESTDIR
+chmod -R 0750 $DESTDIR
 chown www-data:$MYGROUP $DESTDIR/config.ru
 chmod 0660 $DESTDIR/config.ru
 
