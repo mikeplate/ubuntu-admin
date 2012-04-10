@@ -151,7 +151,7 @@ EOF
 
 # Create the default web site
 if [ -f ./add-nginx-ruby.sh ]; then
-    ./add-nginx-ruby.sh default \*
+    ./nginx-add-ruby.sh default \*
 fi
 
 echo 'Setup completed'

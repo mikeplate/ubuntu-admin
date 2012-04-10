@@ -8,19 +8,19 @@ for all setups.
 
 Immediately after installing a new server, the following command can be used to setup a new web server:
 
-sudo setup-nginx-ruby.sh
+sudo nginx-setup.sh
 
 It will setup the following components:
 
 - Nginx
 - Passenger
 - Ruby
-- Sinatra
+- Sinatra and a few other gems
 - Add a default site with server name "localhost"
 
 ## Add a new site to the web server
 
-sudo add-nginx-ruby.sh company-site companydomainname.com
+sudo nginx-add-ruby.sh company-site companydomainname.com
 
 This script takes two arguments:
 
