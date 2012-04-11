@@ -174,16 +174,16 @@ console output
 exec /usr/sbin/nginx -g "daemon off;"
 respawn
 EOF
+start nginx
+if [ $? -ne 0 ]; then
+    echo 'Nginx did not start'
+    exit
+fi
 
 # Create the default web site
 if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default _
 fi
 
-start nginx
-if [ $? -ne 0 ]; then
-    echo 'Nginx did not start'
-    exit
-fi
 echo 'Setup completed successfully'
 

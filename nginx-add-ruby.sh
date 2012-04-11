@@ -10,7 +10,7 @@ fi
 
 # Check arguments
 if [ $# -ne 2 ]; then
-    echo 'Syntax: add-nginx-ruby.sh <site-name> <domain>'
+    echo 'Syntax: nginx-add-ruby.sh <site-name> <domain>[:<port>]'
     exit
 fi
 
@@ -65,6 +65,7 @@ if [ $? -ne 0 ]; then
     # rm -rf $DESTDIR
     exit
 fi
+nginx -s reload
 
 echo "Created site $1 successfully"
 

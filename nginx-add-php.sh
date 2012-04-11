@@ -67,6 +67,7 @@ if [ $? -ne 0 ]; then
     # rm -rf $DESTDIR
     exit
 fi
+nginx -s reload
 
 echo "Created site $1 successfully"
 
