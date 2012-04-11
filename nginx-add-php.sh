@@ -15,6 +15,7 @@ if [ $# -ne 2 ]; then
 fi
 
 DESTDIR=/srv/www/$1
+SITENAME=$1
 MYUSER=$SUDO_USER
 MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
@@ -46,6 +47,7 @@ server {
         fastcgi_pass 127.0.0.1:9000;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $DESTDIR\$fastcgi_script_name;
+        fastcgi_param SITE_NAME "$SITENAME";
         include fastcgi_params;
     }
 }

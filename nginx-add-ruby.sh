@@ -15,6 +15,7 @@ if [ $# -ne 2 ]; then
 fi
 
 DESTDIR=/srv/www/$1
+SITENAME=$1
 MYUSER=$SUDO_USER
 MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
@@ -44,6 +45,7 @@ server {
     root /srv/www/$1/public;
     passenger_enabled on;
     passenger_friendly_error_pages on;
+    passenger_set_cgi_param SITE_NAME "$SITENAME";
 }
 EOF
 chmod 0640 /srv/www/$1.conf

@@ -1,11 +1,19 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Web Site</title>
+        <title><%=title%></title>
         <link rel="stylesheet" type="text/css" href="/site.css" />
     </head>
     <body>
-        <h1>Web Site</h1>
+        <h1><%=title%></h1>
+        <table>
+        <% properties.each do |name, data| %>
+            <tr>
+                <td nowrap><%=name%></td>
+                <td><%=data%></td>
+            </tr>
+        <% end %>
+        </table>
     </body>
 </html>
 
