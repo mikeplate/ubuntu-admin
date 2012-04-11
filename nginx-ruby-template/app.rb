@@ -8,6 +8,6 @@ get '/' do
     data['System'] = `uname -a`
     data['Memory'] = `free`.gsub("\n", '<br />')
     data['Disk'] = `df -Ph`.gsub("\n", '<br />')
-    erb :index, :locals => { title: env['SITE_NAME'], properties: data }
+    erb :status, :locals => { title: env['SITE_NAME'], properties: data }
 end
 
