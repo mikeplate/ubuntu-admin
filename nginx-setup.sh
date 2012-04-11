@@ -85,6 +85,7 @@ cd nginx-$NGINXVER
     --add-module=$PASSENGERPATH/ext/nginx
 make
 cp objs/nginx /usr/sbin/nginx
+cd ../../..
 
 # Setup basic nginx configuration
 if [ ! -d /etc/nginx ]; then
