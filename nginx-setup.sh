@@ -169,7 +169,7 @@ tee /etc/init/nginx.conf > /dev/null << EOF
 description "nginx http daemon"
 start on runlevel [2]
 stop on runlevel [016]
-console owner
+console output
 
 exec /usr/sbin/nginx -g "daemon off;"
 respawn
