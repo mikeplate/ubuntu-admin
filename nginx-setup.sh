@@ -85,7 +85,6 @@ cd nginx-$NGINXVER
     --add-module=$PASSENGERPATH/ext/nginx
 make
 cp objs/nginx /usr/sbin/nginx
-cd ../../..
 
 # Setup basic nginx configuration
 if [ ! -d /etc/nginx ]; then
@@ -180,6 +179,7 @@ if [ $? -ne 0 ]; then
     echo 'Nginx did not start'
     exit
 fi
+cd ../../..
 
 # Create the default web site
 if [ -f ./nginx-add-ruby.sh ]; then
