@@ -19,7 +19,7 @@ MYUSER=$SUDO_USER
 MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
 # Create destination directories
-mkdir $DESTDIR
+mkdir -p $DESTDIR
 if [ $? -ne 0 ]; then
     echo "Could not create destination directory at $DESTDIR"
     exit
