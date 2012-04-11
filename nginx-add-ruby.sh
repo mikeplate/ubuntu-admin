@@ -21,7 +21,7 @@ MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 # Separate domain name and port from second argument
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
-if [ $SITEPORT == $SITEDOMAIN ]; then
+if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
 

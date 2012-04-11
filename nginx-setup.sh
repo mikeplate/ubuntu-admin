@@ -177,7 +177,7 @@ EOF
 
 # Create the default web site
 if [ -f ./nginx-add-ruby.sh ]; then
-    ./nginx-add-ruby.sh default \*
+    ./nginx-add-ruby.sh default _
 fi
 
 start nginx
