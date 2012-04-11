@@ -165,7 +165,7 @@ if [ ! -d /var/lib/nginx ]; then
 fi
 
 # Setup the nginx service environment
-tee /etc/init/nginx > /dev/null << EOF
+tee /etc/init/nginx.conf > /dev/null << EOF
 description "nginx http daemon"
 start on runlevel [2]
 stop on runlevel [016]
@@ -180,5 +180,10 @@ if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default \*
 fi
 
-echo 'Setup completed'
+start nginx
+if [ $? -ne 0 ]; then
+    echo 'Nginx did not start'
+    exit
+fi
+echo 'Setup completed successfully'
 
