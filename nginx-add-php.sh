@@ -18,6 +18,13 @@ DESTDIR=/srv/www/$1
 MYUSER=$SUDO_USER
 MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
+# Separate domain name and port from second argument
+SITEPORT=${2#*:}
+SITEDOMAIN=${2%:*}
+if [ $SITEPORT == $SITEDOMAIN ]; then
+    SITEPORT=80
+fi
+
 # Create destination directories
 mkdir -p $DESTDIR
 if [ $? -ne 0 ]; then
@@ -28,8 +35,8 @@ fi
 # Create nginx configuration
 tee /srv/www/$1.conf > /dev/null << EOF
 server {
-    listen 80;
-    server_name $2;
+    listen $SITEPORT;
+    server_name $SITEDOMAIN;
     access_log /var/log/nginx/$1.access.log;
     root /srv/www/$1;
     index index.php index.html;
