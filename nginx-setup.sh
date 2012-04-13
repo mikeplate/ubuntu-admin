@@ -63,6 +63,7 @@ if [ $? -ne 0 ]; then
     echo 'Could not install all packages for php'
     exit
 fi
+/etc/init.d/php5-fpm restart
 
 # Download and unzip nginx
 if [ ! -d tmp/nginx ]; then
