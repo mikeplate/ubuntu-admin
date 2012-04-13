@@ -96,8 +96,8 @@ cp objs/nginx /usr/sbin/nginx
 # Setup basic nginx configuration
 if [ ! -d /etc/nginx ]; then
     mkdir /etc/nginx
-    chown root:root /etc/nginx
-    chmod 0755 /etc/nginx
+    chown root:adm /etc/nginx
+    chmod 0770 /etc/nginx
 fi
 cp conf/mime.types /etc/nginx/mime.types
 tee /etc/nginx/nginx.conf > /dev/null << EOF
@@ -164,12 +164,13 @@ EOF
 # Setup the nginx files environment
 if [ ! -d /etc/nginx/sites ]; then
     mkdir /etc/nginx/sites
-    chmod 0660 /etc/nginx/sites
+    chown root:adm /etc/nginx/sites
+    chmod 0770 /etc/nginx/sites
 fi
 if [ ! -d /var/log/nginx ]; then
     mkdir /var/log/nginx
     chown www-data:adm /var/log/nginx
-    chmod 0750 /var/log/nginx
+    chmod 0770 /var/log/nginx
 fi
 if [ ! -d /var/lib/nginx ]; then
     mkdir /var/lib/nginx
