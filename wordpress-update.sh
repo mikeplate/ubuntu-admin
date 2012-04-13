@@ -10,7 +10,7 @@ fi
 
 # Check arguments
 if [ $# -ne 1 ]; then
-    echo 'Syntax: nginx-update-wordpress.sh <site-name>'
+    echo 'Syntax: wordpress-update.sh <site-name>'
     exit
 fi
 
