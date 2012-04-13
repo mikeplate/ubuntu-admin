@@ -97,7 +97,7 @@ Adding a new database and a user will full permissions to that database, can be 
 script:
 
 ```bash
- ./mysql-add.sh mydata atgY!6263HNBa;a
+ ./mysql-add.sh mydata atgY6263HNBaa
 ```
 
 This script takes two arguments:
