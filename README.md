@@ -20,6 +20,16 @@ It will setup the following components:
 - Sinatra and a few other gems
 - Add a default site on port 80, any host name, as a Ruby+Sinatra app
 
+### Background
+
+The script will automatically download the source code for the latest version of Nginx stable release
+and build it with the Passenger extension that is installed with the gem tool. The setup of Nginx is
+quite similar to what you get on Ubuntu with the standard package but with at least two exceptions:
+
+- All site directories are placed under the /srv/www directory
+- Site configuration files are stored in /etc/nginx/sites/*.conf (no distinction between sites-available
+  and sites-enabled as in the standard package)
+
 ## Add a new site to the web server
 
 Adding a new site is supported by two scripts depending on if it should be an Ruby+Sinatra app or a php app.
@@ -42,6 +52,20 @@ It will do the following:
 - Create the web site directory and set appropriate permissions
 - Copy default files for the new site from a template subdirectory
 - Reload Nginx to have the site running immediately
+
+### Background
+
+The way owners and permissions are set on site directories and files are still under development and
+might change in future versions. Right now, the basic settings in this regard is:
+
+- The currently logged in user (you!) is the owner
+- The www-data group is the group owner
+- The group id bit is set so that new files and directories automatically get www-data as group owner
+- The recommended umask when creating new files and directories is 0027 so that www-data does not have
+  write permissions to anything that is shouldn't
+
+Note that is setup is something I've come up with myself and I'm not yet sure if it is the perfect setup
+both for security reasons and simplicity reasons when developing on the machine.
 
 ## Add WordPress to a php site
 
