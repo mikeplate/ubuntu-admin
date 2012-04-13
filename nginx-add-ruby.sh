@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Add a new site to Nginx running Ruby and Sinatra.
+# Recommends umask 0027 for future file editing.
 
 # Ensure running as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -53,9 +54,10 @@ chmod 0640 /srv/www/$1.conf
 # Copy template files
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
-# Set file system properties correctly
+# Set file system properties
 chown -R $MYUSER:www-data $DESTDIR
 chmod -R 0750 $DESTDIR
+find $DESTDIR -type d -exec chmod 2750 {} \;
 chown www-data:$MYGROUP $DESTDIR/config.ru
 chmod 0660 $DESTDIR/config.ru
 
