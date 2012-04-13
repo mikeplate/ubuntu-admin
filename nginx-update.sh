@@ -30,7 +30,7 @@ USING_NGINXVER=$(nginx -v 2>&1)
 USING_NGINXVER=${USING_NGINXVER#*/}
 
 # Ensure Passenger is up to date and get its version
-gem update passenger
+gem update passenger sinatra sinatra-reloader
 PASSENGERVER=$(gem list | grep passenger)
 [[ $PASSENGERVER =~ [0-9.]+ ]]
 PASSENGERVER=$BASH_REMATCH

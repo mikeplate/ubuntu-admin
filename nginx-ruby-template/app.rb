@@ -3,7 +3,7 @@ get '/' do
     data['Nginx version'] = env['SERVER_SOFTWARE'][/\/(.+)/, 1]
     data['Ruby version'] = "#{RUBY_VERSION}-#{RUBY_PATCHLEVEL}"
     data['Sinatra version'] = Gem.loaded_specs['sinatra'].version
-    data['Passenger version'] = `gem query`[/passenger \((.+)\)/, 1]
+    data['Passenger version'] = `nginx -V 2>&1`[/passenger-([0-9.]+)/, 1]
     data['System'] = `uname -a`
     data['Memory'] = `free`.gsub("\n", '<br />')
     data['Disk'] = `df -Ph`.gsub("\n", '<br />')
