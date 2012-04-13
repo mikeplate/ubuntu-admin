@@ -32,10 +32,10 @@ if [ $? -ne 0 ]; then
     exit
 fi
 
-# Install other required packages
-apt-get install -y build-essential autotools-dev libcurl4-gnutls-dev libpcre3-dev libssl-dev zlib1g-dev php5 php5-fpm
+# Install required packages for building nginx
+apt-get install -y build-essential autotools-dev libcurl4-gnutls-dev libpcre3-dev libssl-dev zlib1g-dev
 if [ $? -ne 0 ]; then
-    echo 'Could not install all packages'
+    echo 'Could not install all packages for building nginx'
     exit
 fi
 
@@ -56,6 +56,13 @@ for gemname in "${RUBYGEMS[@]}"; do
         exit
     fi
 done
+
+# Install packages for php
+apt-get install -y php5 php5-fpm php5-mysql
+if [ $? -ne 0 ]; then
+    echo 'Could not install all packages for php'
+    exit
+fi
 
 # Download and unzip nginx
 if [ ! -d tmp/nginx ]; then
