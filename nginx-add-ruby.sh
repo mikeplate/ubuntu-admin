@@ -38,7 +38,7 @@ mkdir $DESTDIR/views
 mkdir $DESTDIR/tmp
 
 # Create nginx configuration
-tee /srv/www/$1.conf > /dev/null << EOF
+tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
@@ -49,7 +49,7 @@ server {
     passenger_set_cgi_param SITE_NAME "$SITENAME";
 }
 EOF
-chmod 0640 /srv/www/$1.conf
+chmod 0660 /etc/nginx/sites/$1.conf
 
 # Copy template files
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
@@ -65,8 +65,6 @@ chmod 0660 $DESTDIR/config.ru
 nginx -t
 if [ $? -ne 0 ]; then
     echo 'Nginx reported error in configuration'
-    # rm /srv/www/$1.conf
-    # rm -rf $DESTDIR
     exit
 fi
 nginx -s reload

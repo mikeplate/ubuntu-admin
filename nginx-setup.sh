@@ -125,7 +125,7 @@ http {
     gzip on;
     gzip_disable "msie6";
 
-    include /srv/www/*.conf;
+    include /etc/nginx/sites/*.conf;
 }
 EOF
 tee /etc/nginx/fastcgi_params > /dev/null << EOF
@@ -155,6 +155,10 @@ fastcgi_param	REDIRECT_STATUS		200;
 EOF
 
 # Setup the nginx files environment
+if [ ! -d /etc/nginx/sites ]; then
+    mkdir /etc/nginx/sites
+    chmod 0660 /etc/nginx/sites
+fi
 if [ ! -d /var/log/nginx ]; then
     mkdir /var/log/nginx
     chown www-data:adm /var/log/nginx

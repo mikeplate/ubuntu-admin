@@ -35,7 +35,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Create nginx configuration
-tee /srv/www/$1.conf > /dev/null << EOF
+tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
@@ -53,7 +53,7 @@ server {
     }
 }
 EOF
-chmod 0640 /srv/www/$1.conf
+chmod 0660 /etc/nginx/sites/$1.conf
 
 # Copy template files
 cp -R "$(dirname $0)/nginx-php-template/." $DESTDIR
@@ -67,8 +67,6 @@ find $DESTDIR -type d -exec chmod 2750 {} \;
 nginx -t
 if [ $? -ne 0 ]; then
     echo 'Nginx reported error in configuration'
-    # rm /srv/www/$1.conf
-    # rm -rf $DESTDIR
     exit
 fi
 nginx -s reload
