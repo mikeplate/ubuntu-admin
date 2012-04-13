@@ -9,11 +9,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Install MySQL
-DEBIAN_FRONTEND=noninteractive
-apt-get install mysql-server
+export DEBIAN_FRONTEND=noninteractive
+apt-get -y install mysql-server
 
 # Set root password
-read -s -p 'Specify password for root: '
+read -s -p 'Specify password to set for root: '
 echo ''
 mysqladmin -u root password $REPLY
 
