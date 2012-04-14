@@ -15,5 +15,10 @@ apt-get -y install mysql-server
 # Set root password
 read -s -p 'Specify password to set for root: '
 echo ''
-mysqladmin -u root password $REPLY
+mysql -u root << EOF
+update mysql.user set password = password('$REPLY') where user='root';
+flush privileges;
+EOF
+
+echo 'MySQL installed successfully'
 
