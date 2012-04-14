@@ -19,6 +19,15 @@ mysql -u root << EOF
 update mysql.user set password = password('$REPLY') where user='root';
 flush privileges;
 EOF
+if [ $? -ne 0 ]; then
+    echo 'Failed to set root password for MySQL'
+    exit $?
+fi
 
-echo 'MySQL installed successfully'
+# Get version for display purposes
+MYSQLVER=$(mysqld --version)
+[[ $MYSQLVER =~ Ver\ ([0-9.]+) ]]
+MYSQLVER=${BASH_REMATCH[1]}
+
+echo "MySQL version $MYSQLVER installed successfully"
 
