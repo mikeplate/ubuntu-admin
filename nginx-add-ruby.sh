@@ -60,6 +60,7 @@ chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
 chown www-data:$MYGROUP $DESTDIR/config.ru
 chmod 0660 $DESTDIR/config.ru
+chmod 0770 $DESTDIR/tmp
 
 # Check that nginx is happy with configuration
 nginx -t

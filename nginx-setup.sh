@@ -48,7 +48,7 @@ if [ ${#PASSENGERPATH} -lt 10 ]; then
 fi
 
 # Install other ruby gems
-RUBYGEMS=( sinatra sinatra-reloader sass json )
+RUBYGEMS=( sinatra sinatra-reloader rack-debug sass json )
 for gemname in "${RUBYGEMS[@]}"; do
     gem install $gemname
     if [ $? -ne 0 ]; then

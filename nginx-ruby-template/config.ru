@@ -12,5 +12,9 @@ get '/*.css' do
 end
 
 require './app.rb'
+
+require 'rack/debug'
+use Rack::Debug
+
 run Sinatra::Application
 
