@@ -28,7 +28,7 @@ if [ $SITEPORT == $SITEDOMAIN ]; then
 fi
 
 # Create destination directories
-mkdir -p $DESTDIR
+mkdir -p "$DESTDIR/public"
 if [ $? -ne 0 ]; then
     echo "Could not create destination directory at $DESTDIR"
     exit
@@ -40,14 +40,15 @@ server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
     access_log /var/log/nginx/$1.access.log;
-    root /srv/www/$1;
+    error_log /var/log/nginx/$1.error.log;
+    root $DESTDIR/public;
     index index.php index.html;
 
     location ~ .php\$ {
         fastcgi_split_path_info ^(.+\.php)(.*)\$;
         fastcgi_pass unix:/var/run/php5-fpm.sock;
         fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $DESTDIR\$fastcgi_script_name;
+        fastcgi_param SCRIPT_FILENAME $DESTDIR/public\$fastcgi_script_name;
         fastcgi_param SITE_NAME "$SITENAME";
         include fastcgi_params;
     }
