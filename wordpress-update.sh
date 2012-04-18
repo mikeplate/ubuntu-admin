@@ -15,13 +15,14 @@ if [ $# -ne 1 ]; then
 fi
 
 DESTDIR=/srv/www/$1
+ROOTDIR=$DESTDIR/public
 SITENAME=$1
 MYUSER=$SUDO_USER
 MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
 # Ensure destination directory exists
-if [ ! -d $DESTDIR ]; then
-    echo "Site directory $DESTDIR does not exist"
+if [ ! -d $ROOTDIR ]; then
+    echo "Site root directory $ROOTDIR does not exist"
     exit
 fi
 
@@ -49,16 +50,17 @@ TODAY=`date +%F`
 zip -r /srv/www/backup/$1-$TODAY.zip $DESTDIR/*
 
 # Copy all files and set permissions
-if [ -d $DESTDIR/wp-content/plugins ]; then
-    chown -R $MYUSER:www-data $DESTDIR/wp-content/plugins
+if [ -d $ROOTDIR/wp-content/plugins ]; then
+    chown -R $MYUSER:www-data $ROOTDIR/wp-content/plugins
 fi
-cp -r tmp/wordpress/* $DESTDIR/
+cp -r tmp/wordpress/* $ROOTDIR/
 rm tmp/wordpress.tar.gz
-chown -R $MYUSER:www-data $DESTDIR/
-chmod -R 770 $DESTDIR/wp-content/plugins
+chown -R $MYUSER:www-data $ROOTDIR/
+chmod -R 770 $ROOTDIR/wp-content/plugins
 
 # Apply patches to Wordpress
-sed -i 's/'\''--'\''/'\''-_'\''/' $DESTDIR/wp-includes/formatting.php
+# This one removes a replacement of -- when saving post content
+sed -i 's/'\''--'\''/'\''-_'\''/' $ROOTDIR/wp-includes/formatting.php
 
 echo "Updated Wordpress for site $1 successfully"
 
