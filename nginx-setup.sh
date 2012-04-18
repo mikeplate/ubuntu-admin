@@ -63,6 +63,7 @@ if [ $? -ne 0 ]; then
     echo 'Could not install all packages for php'
     exit
 fi
+sed -e 's|listen = 127.0.0.1:9000|listen = /var/run/php5-fpm.sock|' -i /etc/php5/fpm/pool.d/www.conf
 /etc/init.d/php5-fpm restart
 
 # Download and unzip nginx

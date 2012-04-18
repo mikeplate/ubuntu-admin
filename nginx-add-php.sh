@@ -45,7 +45,7 @@ server {
 
     location ~ .php\$ {
         fastcgi_split_path_info ^(.+\.php)(.*)\$;
-        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $DESTDIR\$fastcgi_script_name;
         fastcgi_param SITE_NAME "$SITENAME";

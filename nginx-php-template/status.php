@@ -7,7 +7,7 @@ function runcmd($cmd) {
     return str_replace("\n", '<br />', $ret);
 }
 
-$title = $_ENV['SITE_NAME'];
+$title = $_SERVER['SITE_NAME'];
 $properties = Array();
 $properties['Nginx version'] = substr($_SERVER['SERVER_SOFTWARE'], strpos($_SERVER['SERVER_SOFTWARE'], '/')+1);
 $properties['PHP version'] = phpversion();
