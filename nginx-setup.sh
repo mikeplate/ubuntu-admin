@@ -14,6 +14,7 @@ if [ ! -d tmp ]; then
 fi
 
 # Determine the current stable version of nginx
+echo 'Get nginx version from web site'
 HTML="$(wget -qO- http://nginx.org/en/download.html)"
 if [[ ! $HTML =~ \<h4\>Stable\ version.* ]]; then
     echo 'Cannot determine nginx version, did not find heading'
@@ -31,6 +32,7 @@ if [ ${#NGINXVER} -lt 5 ]; then
 fi
 
 # Install Ruby
+echo 'Install ruby1.9.1-full'
 apt-get install -yq ruby1.9.1-full >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install ruby1.9.1-full'
@@ -38,6 +40,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Install required packages for building nginx
+echo 'Install other packages for building'
 apt-get install -yq build-essential autotools-dev libcurl4-gnutls-dev libpcre3-dev libssl-dev zlib1g-dev >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install all packages for building nginx'
@@ -45,7 +48,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Install Passenger and get the path to the nginx extension
-gem -q install passenger
+echo 'Install Passenger'
+gem install passenger -q
 PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/ext\/nginx\/Configuration.c//')"
 if [ ${#PASSENGERPATH} -lt 10 ]; then
     echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
@@ -53,9 +57,10 @@ if [ ${#PASSENGERPATH} -lt 10 ]; then
 fi
 
 # Install other ruby gems
+echo 'Install some Ruby gems'
 RUBYGEMS=( sinatra sinatra-reloader rack-debug sass json )
 for gemname in "${RUBYGEMS[@]}"; do
-    gem install $gemname
+    gem install $gemname -q
     if [ $? -ne 0 ]; then
         echo "Could not install Rubygem $gemname."
         exit
@@ -63,7 +68,8 @@ for gemname in "${RUBYGEMS[@]}"; do
 done
 
 # Install packages for php
-apt-get install -y php5 php5-fpm php5-mysql
+echo 'Install php5'
+apt-get install -yq php5 php5-fpm php5-mysql >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install all packages for php'
     exit
@@ -72,12 +78,13 @@ sed -e 's|listen = 127.0.0.1:9000|listen = /var/run/php5-fpm.sock|' -i /etc/php5
 /etc/init.d/php5-fpm restart
 
 # Download and unzip nginx
+echo 'Download and build nginx'
 if [ ! -d tmp/nginx ]; then
     mkdir -p tmp/nginx
 fi
 cd tmp/nginx
-wget http://nginx.org/download/nginx-$NGINXVER.tar.gz
-tar xvf nginx-$NGINXVER.tar.gz
+wget -q http://nginx.org/download/nginx-$NGINXVER.tar.gz
+tar -xf nginx-$NGINXVER.tar.gz
 cd nginx-$NGINXVER
 
 # Configure and build nginx
@@ -96,8 +103,16 @@ cd nginx-$NGINXVER
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
-    --add-module=$PASSENGERPATH/ext/nginx
-make
+    --add-module=$PASSENGERPATH/ext/nginx >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Nginx configure script failed'
+    exit $?
+fi
+make >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Nginx make failed'
+    exit $?
+fi
 cp objs/nginx /usr/sbin/nginx
 
 # Setup basic nginx configuration
