@@ -10,20 +10,20 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Check arguments
-if [ $# -ne 2 ]; then
-    echo 'Syntax: nginx-add-php.sh <site-name> <domain>'
+if [ $# -lt 2 ]; then
+    echo 'Syntax: nginx-add-php.sh <site-name> <domain> [<user-name>]'
     exit
 fi
 
 DESTDIR=/srv/www/$1
 SITENAME=$1
-MYUSER=$SUDO_USER
-MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
+THEUSER=$SUDO_USER
+THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
 # Separate domain name and port from second argument
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
-if [ $SITEPORT == $SITEDOMAIN ]; then
+if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
 
@@ -60,9 +60,10 @@ chmod 0660 /etc/nginx/sites/$1.conf
 cp -R "$(dirname $0)/nginx-php-template/." $DESTDIR
 
 # Set file system properties
-chown -R $MYUSER:www-data $DESTDIR
+chown -R $THEUSER:www-data $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
+chmod 0710 $DESTDIR
 
 # Check that nginx is happy with configuration
 nginx -t

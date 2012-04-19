@@ -28,14 +28,13 @@ if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
 fi
 
 # Create destination directories
-mkdir -p $DESTDIR
+mkdir -p "$DESTDIR/public"
 if [ $? -ne 0 ]; then
     echo "Could not create destination directory at $DESTDIR"
     exit
 fi
-mkdir $DESTDIR/public
-mkdir $DESTDIR/views
-mkdir $DESTDIR/tmp
+mkdir "$DESTDIR/views"
+mkdir "$DESTDIR/tmp"
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
