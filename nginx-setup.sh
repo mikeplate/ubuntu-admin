@@ -8,6 +8,11 @@ if [ "$(id -u)" -ne 0 ]; then
     exit
 fi
 
+# Create temporary directory
+if [ ! -d tmp ]; then
+    mkdir tmp
+fi
+
 # Determine the current stable version of nginx
 HTML="$(wget -qO- http://nginx.org/en/download.html)"
 if [[ ! $HTML =~ \<h4\>Stable\ version.* ]]; then
@@ -26,21 +31,21 @@ if [ ${#NGINXVER} -lt 5 ]; then
 fi
 
 # Install Ruby
-apt-get install -y ruby1.9.1-full
+apt-get install -yq ruby1.9.1-full >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install ruby1.9.1-full'
     exit
 fi
 
 # Install required packages for building nginx
-apt-get install -y build-essential autotools-dev libcurl4-gnutls-dev libpcre3-dev libssl-dev zlib1g-dev
+apt-get install -yq build-essential autotools-dev libcurl4-gnutls-dev libpcre3-dev libssl-dev zlib1g-dev >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install all packages for building nginx'
     exit
 fi
 
 # Install Passenger and get the path to the nginx extension
-gem install passenger
+gem -q install passenger
 PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/ext\/nginx\/Configuration.c//')"
 if [ ${#PASSENGERPATH} -lt 10 ]; then
     echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
@@ -177,6 +182,11 @@ fi
 if [ ! -d /var/lib/nginx ]; then
     mkdir /var/lib/nginx
 fi
+if [ ! -d /srv/www ]; then
+    mkdir -p /srv/www
+fi
+chown root:root /srv/www
+chmod 0751 /srv/www
 
 # Setup the nginx service environment
 tee /etc/init/nginx.conf > /dev/null << EOF

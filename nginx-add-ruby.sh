@@ -10,15 +10,15 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Check arguments
-if [ $# -ne 2 ]; then
-    echo 'Syntax: nginx-add-ruby.sh <site-name> <domain>[:<port>]'
+if [ $# -lt 2 ]; then
+    echo 'Syntax: nginx-add-ruby.sh <site-name> <domain>[:<port>] [<user-name>]'
     exit
 fi
 
 DESTDIR=/srv/www/$1
 SITENAME=$1
-MYUSER=$SUDO_USER
-MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
+THEUSER=$SUDO_USER
+THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
 
 # Separate domain name and port from second argument
 SITEPORT=${2#*:}
@@ -55,10 +55,11 @@ chmod 0660 /etc/nginx/sites/$1.conf
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
 # Set file system properties
-chown -R $MYUSER:www-data $DESTDIR
+chown -R $THEUSER:www-data $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chown www-data:$MYGROUP $DESTDIR/config.ru
+chown www-data:$THEGROUP $DESTDIR/config.ru
+chmod 0710 $DESTDIR
 chmod 0660 $DESTDIR/config.ru
 chmod 0770 $DESTDIR/tmp
 
