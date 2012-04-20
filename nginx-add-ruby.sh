@@ -15,24 +15,34 @@ if [ $# -lt 2 ]; then
     exit
 fi
 
-DESTDIR=/srv/www/$1
+# Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
-THEUSER=$SUDO_USER
-THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
-
-# Separate domain name and port from second argument
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
 if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
 
+# Determine site directory and user
+if [ $# -eq 2 ]; then
+    DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
+else
+    # Does user exist?
+    id $3 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        DESTDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
+        mkdir -p $DESTDIR
+        chmod 0710 $DESTDIR
+        useradd --home "$DESTDIR" $3
+        DESTDIR=$DESTDIR/$1
+    else
+        HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
+        DESTDIR=$HOMEDIR/$1
+    fi
+fi
+
 # Create destination directories
 mkdir -p "$DESTDIR/public"
-if [ $? -ne 0 ]; then
-    echo "Could not create destination directory at $DESTDIR"
-    exit
-fi
 mkdir "$DESTDIR/views"
 mkdir "$DESTDIR/tmp"
 
@@ -52,6 +62,15 @@ chmod 0660 /etc/nginx/sites/$1.conf
 
 # Copy template files
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
+
+# Set or add user for site
+if [ $# -eq 2 ]; then
+    THEUSER=$SUDO_USER
+    THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
+else
+    THEUSER=$3
+    THEGROUP=$(groups $3 | awk '{print $3}')
+fi
 
 # Set file system properties
 chown -R $THEUSER:www-data $DESTDIR
