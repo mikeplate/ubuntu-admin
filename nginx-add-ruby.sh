@@ -52,7 +52,7 @@ server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
     access_log /var/log/nginx/$1.access.log;
-    root /srv/www/$1/public;
+    root $DESTDIR;
     passenger_enabled on;
     passenger_friendly_error_pages on;
     passenger_set_cgi_param SITE_NAME "$SITENAME";
