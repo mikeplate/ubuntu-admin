@@ -18,15 +18,16 @@ USER_NAME=$1
 USER_PASSWORD=$2
 
 # Create database
-sudo -u postgres psql << EOF
+echo 'Creating database and user'
+sudo -u postgres psql >> tmp/logfile << EOF
     create database $DB_NAME;
     create user $USER_NAME with password '$USER_PASSWORD';
     grant all privileges on database $DB_NAME to $USER_NAME;
 EOF
-if [[ $? -ne 0 ]]; then
+if [ $? -ne 0 ]; then
     echo 'Failed to create database and user in PostgreSQL'
     exit $?
 fi
 
-echo 'Created database and user in PostgreSQL'
+echo "Created database and user $DB_NAME in PostgreSQL successfully"
 

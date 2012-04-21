@@ -8,8 +8,14 @@ if [ "$(id -u)" -ne 0 ]; then
     exit
 fi
 
+# Ensure tmp directory exists for log file
+if [ ! -d tmp ]; then
+    mkdir tmp
+fi
+
 # Install PostgreSQL
-apt-get -yq install postgresql libpq-dev
+echo 'Installing PostgreSQL packages'
+apt-get -yq install postgresql libpq-dev postgresql-contrib >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Failed to install postgresql package'
     exit $?
@@ -21,8 +27,17 @@ PSQLVER=$(psql --version)
 PSQLVER=$BASH_REMATCH
 
 # Install libraries
-gem install dm-postgres-adapter
-apt-get -yq install php5-pgsql
+echo 'Installing PostgreSQL libraries'
+gem install dm-postgres-adapter -q >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Failed to install dm-postgres-adapter gem'
+    exit $?
+fi
+apt-get -yq install php5-pgsql >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Failed to install php5-pgsql package'
+    exit $?
+fi
 
 echo "PostgreSQL version $PSQLVER installed successfully"
 
