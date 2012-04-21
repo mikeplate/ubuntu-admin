@@ -30,12 +30,17 @@ else
     # Does user exist?
     id $3 > /dev/null 2>&1
     if [ $? -ne 0 ]; then
+        # Create home directory for new user
         DESTDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
         mkdir -p $DESTDIR
-        chmod 0710 $DESTDIR
+
+        # Add new user
         useradd --home "$DESTDIR" $3
+        chown $3:www-data $DESTDIR
+        chmod 0710 $DESTDIR
         DESTDIR=$DESTDIR/$1
     else
+        # Retrieve the home directory for the specified user
         HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
         DESTDIR=$HOMEDIR/$1
     fi
@@ -45,14 +50,18 @@ fi
 mkdir -p "$DESTDIR/public"
 mkdir "$DESTDIR/views"
 mkdir "$DESTDIR/tmp"
+mkdir "$DESTDIR/logs"
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
-    access_log /var/log/nginx/$1.access.log;
-    root $DESTDIR;
+    access_log $DESTDIR/logs/$1.access.log;
+    error_log $DESTDIR/logs/error.log;
+    root $DESTDIR/public;
+    index index.html;
+
     passenger_enabled on;
     passenger_friendly_error_pages on;
     passenger_set_cgi_param SITE_NAME "$SITENAME";
@@ -63,20 +72,22 @@ chmod 0660 /etc/nginx/sites/$1.conf
 # Copy template files
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
-# Set or add user for site
+# Set variables for site user and group
 if [ $# -eq 2 ]; then
-    THEUSER=$SUDO_USER
-    THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
+    SITE_USER=$SUDO_USER
+    RUN_AS_USER=www-data
+    SITE_GROUP=$(groups $SUDO_USER | awk '{print $3}')
 else
-    THEUSER=$3
-    THEGROUP=$(groups $3 | awk '{print $3}')
+    SITE_USER=$3
+    RUN_AS_USER=$3
+    SITE_GROUP=$(groups $3 | awk '{print $3}')
 fi
 
 # Set file system properties
-chown -R $THEUSER:www-data $DESTDIR
+chown -R $SITE_USER:www-data $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chown www-data:$THEGROUP $DESTDIR/config.ru
+chown $RUN_AS_USER:$SITE_GROUP $DESTDIR/config.ru
 chmod 0710 $DESTDIR
 chmod 0660 $DESTDIR/config.ru
 chmod 0770 $DESTDIR/tmp
@@ -89,5 +100,5 @@ if [ $? -ne 0 ]; then
 fi
 nginx -s reload
 
-echo "Created site $1 successfully"
+echo "Created Ruby site $1 successfully at $DESTDIR"
 

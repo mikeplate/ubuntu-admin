@@ -11,36 +11,52 @@ fi
 
 # Check arguments
 if [ $# -lt 2 ]; then
-    echo 'Syntax: nginx-add-php.sh <site-name> <domain> [<user-name>]'
+    echo 'Syntax: nginx-add-php.sh <site-name> <domain>[:<port>] [<user-name>]'
     exit
 fi
 
-DESTDIR=/srv/www/$1
+# Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
-THEUSER=$SUDO_USER
-THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
-
-# Separate domain name and port from second argument
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
 if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
 
+# Determine site directory and user
+if [ $# -eq 2 ]; then
+    DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
+else
+    # Does user exist?
+    id $3 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        # Create home directory for new user
+        DESTDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
+        mkdir -p $DESTDIR
+
+        # Add new user
+        useradd --home "$DESTDIR" $3
+        chown $3:www-data $DESTDIR
+        chmod 0710 $DESTDIR
+        DESTDIR=$DESTDIR/$1
+    else
+        # Retrieve the home directory for the specified user
+        HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
+        DESTDIR=$HOMEDIR/$1
+    fi
+fi
+
 # Create destination directories
 mkdir -p "$DESTDIR/public"
-if [ $? -ne 0 ]; then
-    echo "Could not create destination directory at $DESTDIR"
-    exit
-fi
+mkdir "$DESTDIR/logs"
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
-    access_log /var/log/nginx/$1.access.log;
-    error_log /var/log/nginx/$1.error.log;
+    access_log $DESTDIR/logs/$1.access.log;
+    error_log $DESTDIR/logs/error.log;
     root $DESTDIR/public;
     index index.php index.html;
 
@@ -59,8 +75,18 @@ chmod 0660 /etc/nginx/sites/$1.conf
 # Copy template files
 cp -R "$(dirname $0)/nginx-php-template/." $DESTDIR
 
+# Set variables for site user and group
+# Note that php does NOT support RUN_AS_USER yet
+if [ $# -eq 2 ]; then
+    SITE_USER=$SUDO_USER
+    SITE_GROUP=$(groups $SUDO_USER | awk '{print $3}')
+else
+    SITE_USER=$3
+    SITE_GROUP=$(groups $3 | awk '{print $3}')
+fi
+
 # Set file system properties
-chown -R $THEUSER:www-data $DESTDIR
+chown -R $SITE_USER:www-data $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
 chmod 0710 $DESTDIR
@@ -73,5 +99,5 @@ if [ $? -ne 0 ]; then
 fi
 nginx -s reload
 
-echo "Created site $1 successfully"
+echo "Created Php site $1 successfully at $DESTDIR"
 
