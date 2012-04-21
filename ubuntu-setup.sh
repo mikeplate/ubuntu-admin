@@ -8,6 +8,11 @@ if [ "$(id -u)" -ne 0 ]; then
     exit
 fi
 
+# Ensure we are up to date
+echo 'Ensure packages are updated and upgraded'
+apt-get -yq update
+apt-get -yq upgrade
+
 # Setup time synchronization
 tee /etc/cron.daily/ntpdate > /dev/null << EOF
 ntpdate ntp.ubuntu.com

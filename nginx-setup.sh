@@ -13,6 +13,11 @@ if [ ! -d tmp ]; then
     mkdir tmp
 fi
 
+# Ensure we are up to date
+echo 'Ensure packages are updated and upgraded'
+apt-get -yq update >> tmp/logfile
+apt-get -yq upgrade >> tmp/logfile
+
 # Determine the current stable version of nginx
 echo 'Get nginx version from web site'
 HTML="$(wget -qO- http://nginx.org/en/download.html)"
@@ -49,10 +54,10 @@ fi
 
 # Install Passenger and get the path to the nginx extension
 echo 'Install Passenger'
-gem install passenger -q
+gem install passenger -q >> tmp/logfile
 PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/ext\/nginx\/Configuration.c//')"
 if [ ${#PASSENGERPATH} -lt 10 ]; then
-    echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
+    echo "Cannot determine Passenger location, path '$PASSENGERPATH' is too short"
     exit
 fi
 
@@ -103,12 +108,12 @@ cd nginx-$NGINXVER
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
-    --add-module=$PASSENGERPATH/ext/nginx >> tmp/logfile
+    --add-module=$PASSENGERPATH/ext/nginx >> ../../logfile
 if [ $? -ne 0 ]; then
     echo 'Nginx configure script failed'
     exit $?
 fi
-make >> tmp/logfile
+make >> ../../logfile
 if [ $? -ne 0 ]; then
     echo 'Nginx make failed'
     exit $?
