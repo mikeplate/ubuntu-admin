@@ -108,12 +108,12 @@ cd nginx-$NGINXVER
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
-    --add-module=$PASSENGERPATH/ext/nginx >> ../../logfile
+    --add-module=$PASSENGERPATH/ext/nginx >> ../../logfile 2>&1
 if [ $? -ne 0 ]; then
     echo 'Nginx configure script failed'
     exit $?
 fi
-make >> ../../logfile
+make >> ../../logfile 2>&1
 if [ $? -ne 0 ]; then
     echo 'Nginx make failed'
     exit $?
@@ -230,5 +230,5 @@ if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default _
 fi
 
-echo 'Setup of Nginx version $NGINXVER completed successfully'
+echo "Setup of Nginx version $NGINXVER completed successfully"
 
