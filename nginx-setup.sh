@@ -60,9 +60,9 @@ fi
 echo 'Install some Ruby gems'
 RUBYGEMS=( sinatra sinatra-reloader rack-debug sass json )
 for gemname in "${RUBYGEMS[@]}"; do
-    gem install $gemname -q
+    gem install $gemname -q >> tmp/logfile
     if [ $? -ne 0 ]; then
-        echo "Could not install Rubygem $gemname."
+        echo "Could not install Rubygem $gemname"
         exit
     fi
 done
@@ -225,5 +225,5 @@ if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default _
 fi
 
-echo 'Setup completed successfully'
+echo 'Setup of Nginx version $NGINXVER completed successfully'
 
