@@ -28,21 +28,16 @@ if [ $# -eq 2 ]; then
     DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
 else
     # Does user exist?
+    HOMEDIR=/srv/www/$3
     id $3 > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        # Create home directory for new user
-        HOMEDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
-        mkdir -p $HOMEDIR
-
         # Add new user
+        mkdir -p $HOMEDIR
         useradd --home "$HOMEDIR" $3
-        chown root:root $HOMEDIR
-        chmod 0775 $HOMEDIR
-    else
-        # Retrieve the home directory for the specified user
-        HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
+        chown root:$3 $HOMEDIR
+        chmod 0751 $HOMEDIR
     fi
-    DESTDIR=$HOMEDIR/$1
+    DESTDIR=$HOMEDIR/$1-$(uuidgen | sed 's/-//g')
 fi
 
 # Create destination directories
@@ -88,8 +83,6 @@ fi
 chown -R $SITE_USER:$SITE_GROUP $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chown root:$SITE_GROUP $DESTDIR
-chmod 0755 $DESTDIR
 
 # Check that nginx is happy with configuration
 nginx -t
