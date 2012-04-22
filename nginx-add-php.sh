@@ -78,17 +78,18 @@ cp -R "$(dirname $0)/nginx-php-template/." $DESTDIR
 # Note that php does NOT support RUN_AS_USER yet
 if [ $# -eq 2 ]; then
     SITE_USER=$SUDO_USER
-    SITE_GROUP=$(groups $SUDO_USER | awk '{print $3}')
+    SITE_GROUP='www-data'
 else
     SITE_USER=$3
-    SITE_GROUP=$(groups $3 | awk '{print $3}')
+    SITE_GROUP='www-data'
 fi
 
-# Set file system properties
-chown -R $SITE_USER:www-data $DESTDIR
+# Set permissions
+chown -R $SITE_USER:$SITE_GROUP $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chmod 0710 $DESTDIR
+chown root:$SITE_GROUP $DESTDIR
+chmod 0755 $DESTDIR
 
 # Check that nginx is happy with configuration
 nginx -t
