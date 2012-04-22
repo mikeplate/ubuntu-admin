@@ -31,19 +31,18 @@ else
     id $3 > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         # Create home directory for new user
-        DESTDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
-        mkdir -p $DESTDIR
+        HOMEDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
+        mkdir -p $HOMEDIR
 
         # Add new user
-        useradd --home "$DESTDIR" $3
-        chown $3:www-data $DESTDIR
-        chmod 0710 $DESTDIR
-        DESTDIR=$DESTDIR/$1
+        useradd --home "$HOMEDIR" $3
+        chown root:root $HOMEDIR
+        chmod 0775 $HOMEDIR
     else
         # Retrieve the home directory for the specified user
         HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
-        DESTDIR=$HOMEDIR/$1
     fi
+    DESTDIR=$HOMEDIR/$1
 fi
 
 # Create destination directories

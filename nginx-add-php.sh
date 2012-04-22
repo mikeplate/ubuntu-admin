@@ -36,8 +36,8 @@ else
 
         # Add new user
         useradd --home "$HOMEDIR" $3
-        chown $3:www-data $HOMEDIR
-        chmod 0510 $HOMEDIR
+        chown root:root $HOMEDIR
+        chmod 0775 $HOMEDIR
     else
         # Retrieve the home directory for the specified user
         HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
