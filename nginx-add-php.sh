@@ -25,7 +25,7 @@ fi
 
 # Determine site directory and user
 if [ $# -eq 2 ]; then
-    DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
+    DESTDIR=/srv/www/$1
     SITE_USER=$SUDO_USER
     SITE_GROUP='www-data'
     RUN_AS_USER='www-data'
@@ -41,7 +41,7 @@ else
         chown root:$3 $HOMEDIR
         chmod 0751 $HOMEDIR
     fi
-    DESTDIR=$HOMEDIR/$1-$(uuidgen | sed 's/-//g')
+    DESTDIR=$HOMEDIR/$1
     SITE_USER=$3
     SITE_GROUP='www-data'
     RUN_AS_USER=$3

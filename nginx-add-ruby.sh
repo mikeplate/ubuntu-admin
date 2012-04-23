@@ -25,24 +25,26 @@ fi
 
 # Determine site directory and user
 if [ $# -eq 2 ]; then
-    DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
+    DESTDIR=/srv/www/$1
+    SITE_USER=$SUDO_USER
+    SITE_GROUP='www-data'
+    RUN_AS_USER='www-data'
+    SOCKET_PATH='/var/run/php5-fpm.sock'
 else
     # Does user exist?
+    HOMEDIR=/srv/www/$3
     id $3 > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        # Create home directory for new user
-        HOMEDIR=/srv/www/$3-$(uuidgen | sed 's/-//g')
-        mkdir -p $HOMEDIR
-
         # Add new user
+        mkdir -p $HOMEDIR
         useradd --home "$HOMEDIR" $3
-        chown root:root $HOMEDIR
-        chmod 0775 $HOMEDIR
-    else
-        # Retrieve the home directory for the specified user
-        HOMEDIR=$(cat /etc/passwd | grep ^$3: | awk -F':' '{print $6}')
+        chown root:$3 $HOMEDIR
+        chmod 0751 $HOMEDIR
     fi
     DESTDIR=$HOMEDIR/$1
+    SITE_USER=$3
+    SITE_GROUP='www-data'
+    RUN_AS_USER=$3
 fi
 
 # Create destination directories
@@ -71,24 +73,11 @@ chmod 0660 /etc/nginx/sites/$1.conf
 # Copy template files
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
-# Set variables for site user and group
-if [ $# -eq 2 ]; then
-    SITE_USER=$SUDO_USER
-    RUN_AS_USER=www-data
-    SITE_GROUP=$(groups $SUDO_USER | awk '{print $3}')
-else
-    SITE_USER=$3
-    RUN_AS_USER=$3
-    SITE_GROUP=$(groups $3 | awk '{print $3}')
-fi
-
 # Set file system properties
-chown -R $SITE_USER:www-data $DESTDIR
+chown -R $SITE_USER:$SITE_GROUP $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
 chown $RUN_AS_USER:$SITE_GROUP $DESTDIR/config.ru
-chmod 0710 $DESTDIR
-chmod 0660 $DESTDIR/config.ru
 chmod 0770 $DESTDIR/tmp
 
 # Check that nginx is happy with configuration
