@@ -26,6 +26,10 @@ fi
 # Determine site directory and user
 if [ $# -eq 2 ]; then
     DESTDIR=/srv/www/$1-$(uuidgen | sed 's/-//g')
+    SITE_USER=$SUDO_USER
+    SITE_GROUP='www-data'
+    RUN_AS_USER='www-data'
+    SOCKET_PATH='/var/run/php5-fpm.sock'
 else
     # Does user exist?
     HOMEDIR=/srv/www/$3
@@ -38,6 +42,26 @@ else
         chmod 0751 $HOMEDIR
     fi
     DESTDIR=$HOMEDIR/$1-$(uuidgen | sed 's/-//g')
+    SITE_USER=$3
+    SITE_GROUP='www-data'
+    RUN_AS_USER=$3
+    SOCKET_PATH="/var/run/php5-fpm-$RUN_AS_USER.sock"
+
+    # Create php5-fpm configuration
+    if [ ! -f /etc/php5/fpm/pool.d/$RUN_AS_USER.conf ]; then
+        tee /etc/php5/fpm/pool.d/$RUN_AS_USER.conf > /dev/null << EOF
+[www-$RUN_AS_USER]
+listen = $SOCKET_PATH
+user = $RUN_AS_USER
+group = $SITE_GROUP
+pm = dynamic
+pm.max_children = 2
+pm.start_servers = 1
+pm.min_spare_servers = 1
+pm.max_spare_servers = 1
+EOF
+    /etc/init.d/php5-fpm restart
+    fi
 fi
 
 # Create destination directories
@@ -56,7 +80,7 @@ server {
 
     location ~ .php\$ {
         fastcgi_split_path_info ^(.+\.php)(.*)\$;
-        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_pass unix:$SOCKET_PATH;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $DESTDIR/public\$fastcgi_script_name;
         fastcgi_param SITE_NAME "$SITENAME";
@@ -68,16 +92,6 @@ chmod 0660 /etc/nginx/sites/$1.conf
 
 # Copy template files
 cp -R "$(dirname $0)/nginx-php-template/." $DESTDIR
-
-# Set variables for site user and group
-# Note that php does NOT support RUN_AS_USER yet
-if [ $# -eq 2 ]; then
-    SITE_USER=$SUDO_USER
-    SITE_GROUP='www-data'
-else
-    SITE_USER=$3
-    SITE_GROUP='www-data'
-fi
 
 # Set permissions
 chown -R $SITE_USER:$SITE_GROUP $DESTDIR
