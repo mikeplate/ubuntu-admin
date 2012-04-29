@@ -9,70 +9,77 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Check arguments
-if [ $# -lt 1 ]; then
-    echo 'Syntax: wordpress-update.sh <site-name> [<user-name>]'
+if [ $# -ne 1 ]; then
+    echo 'Syntax: wordpress-update.sh <site-name>'
     exit
 fi
-SITENAME=$1
 
-# Find site directory and set variables for site user and group
-if [ $# -eq 1 ]; then
-    SITE_USER=$SUDO_USER
-    SITE_GROUP=$(groups $SUDO_USER | awk '{print $3}')
-    DESTDIR=/srv/www/$1
-else
-    SITE_USER=$3
-    SITE_GROUP=$(groups $2 | awk '{print $2}')
-    HOMEDIR=$(cat /etc/passwd | grep ^$2: | awk -F':' '{print $6}')
-    DESTDIR=$HOMEDIR/$1
+# Determine site directory and user
+SITENAME=$1
+DESTDIR=/srv/www/$SITENAME
+SITE_USER=$SUDO_USER
+if [ ! -d $DESTDIR ]; then
+    DESTDIR=(/srv/www/*/$SITENAME)
+    if [ ! -d $DESTDIR ]; then
+        echo "Site $SITENAME is not found"
+        exit 1
+    fi
+    SITE_USER=$(echo $DESTDIR | awk -F'/' '{print $4}')
 fi
 ROOTDIR=$DESTDIR/public
+SITE_GROUP='www-data'
 
 # Ensure destination directory exists
 if [ ! -d $ROOTDIR ]; then
     echo "Site root directory $ROOTDIR does not exist"
-    exit
+    exit 1
 fi
 
 # Check prerequisites
 echo 'Install required packages'
+apt-get -qy install zip > tmp/logfile
+
+# Download Wordpress
+echo 'Download and unpack WordPress'
 if [ -d tmp/wordpress ]; then
     rm -rf tmp/wordpress
 fi
-apt-get -yq install zip >> tmp/logfile
-
-# Download Wordpress
-echo 'Download Wordpress'
-wget -qO tmp/wordpress.tar.gz http://wordpress.org/latest.tar.gz >> tmp/logfile
+wget -qO tmp/wordpress.tar.gz http://wordpress.org/latest.tar.gz
 if [ $? -ne 0 ]; then
-    echo 'Failed to download latest version of WordPresss'
-    exit
+    echo 'Failed to download latest version of WordPress'
+    exit $?
 fi
 cd tmp
-tar xvf wordpress.tar.gz >> logfile
+tar xf wordpress.tar.gz > logfile
 cd ..
 
 # Create backup of current files in directory 
-if [ ! -d /srv/www/backup ]; then
-    mkdir /srv/www/backup
+echo 'Create backup of current files in site'
+BACKUP_DIR='/srv/www/.backups'
+if [ ! -d $BACKUP_DIR ]; then
+    mkdir $BACKUP_DIR
+    chown root:adm $BACKUP_DIR
+    chmod 770 $BACKUP_DIR
 fi
 TODAY=`date +%F`
-zip -r /srv/www/backup/$1-$TODAY.zip $DESTDIR/* >> tmp/logfile
+zip -qr $BACKUP_DIR/$SITENAME-$TODAY.zip $DESTDIR/*
 
 # Copy all files
-if [ -d $ROOTDIR/wp-content/plugins ]; then
-    chown -R $SITE_USER:www-data $ROOTDIR/wp-content/plugins
-fi
+echo 'Copy WordPress to site'
 cp -r tmp/wordpress/* $ROOTDIR/
+rm -rf tmp/wordpress
 rm tmp/wordpress.tar.gz
 
-# Set file system properties
-chown -R $SITE_USER:www-data $ROOTDIR/
-chmod -R 770 $ROOTDIR/wp-content/plugins
+# Set permissions (in case new files added/changed)
+chown -R $SITE_USER:$SITE_GROUP $ROOTDIR
+chmod -R 0750 $ROOTDIR
+find $ROOTDIR -type d -exec chmod 2750 {} \;
+chmod -R 0770 $ROOTDIR/wp-content/plugins
+find $ROOTDIR/wp-content/plugins -type d -exec chmod 2770 {} \;
 
 # Apply patches to Wordpress
 # This one removes a replacement of -- when saving post content
 sed -i 's/'\''--'\''/'\''-_'\''/' $ROOTDIR/wp-includes/formatting.php
 
-echo "Updated Wordpress for site $DESTDIR successfully"
+echo "Updated Wordpress for site $1 successfully"
 
