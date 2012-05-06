@@ -41,6 +41,21 @@ else
         chown root:$3 $HOMEDIR
         chmod 0751 $HOMEDIR
     fi
+
+    # Does sftp group exist?
+    cat /etc/group | grep sftp > /dev/null
+    if [ $? -ne 0 ]; then
+        addgroup sftp > /dev/null
+        grep 'Match Group sftp' /etc/ssh/sshd_config
+        if [ $? -ne 0 ]; then
+            echo 'Match Group sftp' >> /etc/ssh/sshd_config
+            echo '    ChrootDirectory %h' >> /etc/ssh/sshd_config
+            echo '    ForceCommand internal-sftp' >> /etc/ssh/sshd_config
+            echo '    AllowTcpForwarding no' >> /etc/ssh/sshd_config
+        fi
+    fi
+    usermod -a -G sftp $3
+
     DESTDIR=$HOMEDIR/$1
     SITE_USER=$3
     SITE_GROUP='www-data'
