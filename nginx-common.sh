@@ -29,7 +29,7 @@ function prepare_user {
         if [ $? -ne 0 ]; then
             echo 'Match Group sftp' >> /etc/ssh/sshd_config
             echo '    ChrootDirectory %h' >> /etc/ssh/sshd_config
-            echo '    ForceCommand internal-sftp' >> /etc/ssh/sshd_config
+            echo '    ForceCommand internal-sftp -f AUTH -l INFO' >> /etc/ssh/sshd_config
             echo '    AllowTcpForwarding no' >> /etc/ssh/sshd_config
         fi
     fi
