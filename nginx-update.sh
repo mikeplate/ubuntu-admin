@@ -83,7 +83,6 @@ cd nginx-$NGINXVER
     --lock-path=/var/lock/nginx.lock \
     --http-client-body-temp-path=/var/lib/nginx/body \
     --http-proxy-temp-path=/var/lib/nginx/proxy \
-    --with-http_uwsgi_module \
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
