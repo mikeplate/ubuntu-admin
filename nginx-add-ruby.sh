@@ -15,34 +15,48 @@ if [ $# -lt 2 ]; then
     exit
 fi
 
-DESTDIR=/srv/www/$1
-SITENAME=$1
-THEUSER=$SUDO_USER
-THEGROUP=$(groups $SUDO_USER | awk '{print $3}')
+source "${0%/*}/nginx-common.sh"
 
-# Separate domain name and port from second argument
+# Determine site information. Separate domain name and port from second argument.
+SITENAME=$1
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
 if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
 
+# Determine site directory and user
+if [ $# -eq 2 ]; then
+    DESTDIR=/srv/www/$1
+    SITE_USER=$SUDO_USER
+    SITE_GROUP='www-data'
+    RUN_AS_USER='www-data'
+    SOCKET_PATH='/var/run/php5-fpm.sock'
+else
+    prepare_user $3
+
+    DESTDIR=$HOMEDIR/$1
+    SITE_USER=$3
+    SITE_GROUP='www-data'
+    RUN_AS_USER=$3
+fi
+
 # Create destination directories
 mkdir -p "$DESTDIR/public"
-if [ $? -ne 0 ]; then
-    echo "Could not create destination directory at $DESTDIR"
-    exit
-fi
 mkdir "$DESTDIR/views"
 mkdir "$DESTDIR/tmp"
+mkdir "$DESTDIR/logs"
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
     server_name $SITEDOMAIN;
-    access_log /var/log/nginx/$1.access.log;
-    root /srv/www/$1/public;
+    access_log $DESTDIR/logs/$1.access.log;
+    error_log $DESTDIR/logs/error.log;
+    root $DESTDIR/public;
+    index index.html;
+
     passenger_enabled on;
     passenger_friendly_error_pages on;
     passenger_set_cgi_param SITE_NAME "$SITENAME";
@@ -54,12 +68,10 @@ chmod 0660 /etc/nginx/sites/$1.conf
 cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
 # Set file system properties
-chown -R $THEUSER:www-data $DESTDIR
+chown -R $SITE_USER:$SITE_GROUP $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chown www-data:$THEGROUP $DESTDIR/config.ru
-chmod 0710 $DESTDIR
-chmod 0660 $DESTDIR/config.ru
+chown $RUN_AS_USER:$SITE_GROUP $DESTDIR/config.ru
 chmod 0770 $DESTDIR/tmp
 
 # Check that nginx is happy with configuration
@@ -70,5 +82,5 @@ if [ $? -ne 0 ]; then
 fi
 nginx -s reload
 
-echo "Created site $1 successfully"
+echo "Created Ruby site $1 successfully at $DESTDIR"
 

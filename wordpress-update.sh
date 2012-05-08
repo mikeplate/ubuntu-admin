@@ -14,49 +14,68 @@ if [ $# -ne 1 ]; then
     exit
 fi
 
-DESTDIR=/srv/www/$1
-ROOTDIR=$DESTDIR/public
+# Determine site directory and user
 SITENAME=$1
-MYUSER=$SUDO_USER
-MYGROUP=$(groups $SUDO_USER | awk '{print $3}')
+DESTDIR=/srv/www/$SITENAME
+SITE_USER=$SUDO_USER
+if [ ! -d $DESTDIR ]; then
+    DESTDIR=(/srv/www/*/$SITENAME)
+    if [ ! -d $DESTDIR ]; then
+        echo "Site $SITENAME is not found"
+        exit 1
+    fi
+    SITE_USER=$(echo $DESTDIR | awk -F'/' '{print $4}')
+fi
+ROOTDIR=$DESTDIR/public
+SITE_GROUP='www-data'
 
 # Ensure destination directory exists
 if [ ! -d $ROOTDIR ]; then
     echo "Site root directory $ROOTDIR does not exist"
-    exit
+    exit 1
 fi
 
 # Check prerequisites
-apt-get -y install zip
+echo 'Install required packages'
+apt-get -qy install zip > tmp/logfile
 
 # Download Wordpress
+echo 'Download and unpack WordPress'
 if [ -d tmp/wordpress ]; then
     rm -rf tmp/wordpress
 fi
-wget -O tmp/wordpress.tar.gz http://wordpress.org/latest.tar.gz
+wget -qO tmp/wordpress.tar.gz http://wordpress.org/latest.tar.gz
 if [ $? -ne 0 ]; then
-    echo 'Failed to download latest version of WordPresss'
-    exit
+    echo 'Failed to download latest version of WordPress'
+    exit $?
 fi
 cd tmp
-tar xvf wordpress.tar.gz
+tar xf wordpress.tar.gz > logfile
 cd ..
 
 # Create backup of current files in directory 
-if [ ! -d /srv/www/backup ]; then
-    mkdir /srv/www/backup
+echo 'Create backup of current files in site'
+BACKUP_DIR='/srv/www/.backups'
+if [ ! -d $BACKUP_DIR ]; then
+    mkdir $BACKUP_DIR
+    chown root:adm $BACKUP_DIR
+    chmod 770 $BACKUP_DIR
 fi
 TODAY=`date +%F`
-zip -r /srv/www/backup/$1-$TODAY.zip $DESTDIR/*
+zip -qr $BACKUP_DIR/$SITENAME-$TODAY.zip $DESTDIR/*
 
-# Copy all files and set permissions
-if [ -d $ROOTDIR/wp-content/plugins ]; then
-    chown -R $MYUSER:www-data $ROOTDIR/wp-content/plugins
-fi
+# Copy all files
+echo 'Copy WordPress to site'
 cp -r tmp/wordpress/* $ROOTDIR/
+rm -rf tmp/wordpress
 rm tmp/wordpress.tar.gz
-chown -R $MYUSER:www-data $ROOTDIR/
-chmod -R 770 $ROOTDIR/wp-content/plugins
+
+# Set permissions (in case new files added/changed)
+chown -R $SITE_USER:$SITE_GROUP $ROOTDIR
+chmod -R 0750 $ROOTDIR
+find $ROOTDIR -type d -exec chmod 2750 {} \;
+chmod -R 0770 $ROOTDIR/wp-content/plugins
+find $ROOTDIR/wp-content/plugins -type d -exec chmod 2770 {} \;
 
 # Apply patches to Wordpress
 # This one removes a replacement of -- when saving post content
