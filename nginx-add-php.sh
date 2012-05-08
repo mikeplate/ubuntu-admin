@@ -59,6 +59,10 @@ EOF
 fi
 
 # Create destination directories
+if [ -d "$DESTDIR" ]; then
+    echo "Site directory $DESTDIR already exists. Script will not continue."
+    exit 1
+fi
 mkdir -p "$DESTDIR/public"
 mkdir "$DESTDIR/logs"
 
