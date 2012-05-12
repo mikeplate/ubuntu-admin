@@ -24,6 +24,15 @@ if [ $? -ne 0 ]; then
     exit $?
 fi
 
+# Remember password for system root user to that 'sudo -H' will give access
+cat > /root/.my.cnf << EOF
+[client]
+user = root
+password = $REPLY
+EOF
+chown root:root /root/.my.cnf
+chmod 600 /root/.my.cnf
+
 # Get version for display purposes
 MYSQLVER=$(mysqld --version)
 [[ $MYSQLVER =~ Ver\ ([0-9.]+) ]]
