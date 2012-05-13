@@ -26,6 +26,11 @@ if [ $? -ne 0 ]; then
         echo 'Could not create database'
         exit $?
     fi
+    sudo -u postgres psql -c "revoke connect on database $DB_NAME from public;" > /dev/null
+    if [ $? -ne 0 ]; then
+        echo 'Could not revoke connect privilege for public to new database'
+        exit $?
+    fi
 fi
 
 # Create the user if it does not exist
