@@ -21,12 +21,12 @@ USER_PASSWORD=$3
 sudo -u postgres psql -Atl | grep ^$DB_NAME\| > /dev/null
 if [ $? -ne 0 ]; then
     echo "Create database $DB_NAME"
-    sudo -u postgres psql -c "create database $DB_NAME;" > /dev/null
+    sudo -u postgres createdb $DB_NAME > /dev/null
     if [ $? -ne 0 ]; then
         echo 'Could not create database'
         exit $?
     fi
-    sudo -u postgres psql -c "revoke connect on database $DB_NAME from public;" > /dev/null
+    sudo -u postgres psql -c "REVOKE CONNECT ON DATABASE $DB_NAME FROM PUBLIC;" > /dev/null
     if [ $? -ne 0 ]; then
         echo 'Could not revoke connect privilege for public to new database'
         exit $?
@@ -41,7 +41,7 @@ if [[ -z $FOUND_USER && -z $USER_PASSWORD ]]; then
 fi
 if [ -z $FOUND_USER ]; then
     echo "Create user $USER_NAME"
-    sudo -u postgres psql -c "create user $USER_NAME with password '$USER_PASSWORD';" > /dev/null
+    sudo -u postgres psql -c "CREATE ROLE $USER_NAME WITH NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN PASSWORD '$USER_PASSWORD';" > /dev/null
     if [ $? -ne 0 ]; then
         echo 'Could not create user'
         exit $?
@@ -50,7 +50,7 @@ fi
 
 # Give user access to database
 echo 'Grant privileges'
-sudo -u postgres psql -c "grant all privileges on database $DB_NAME to $USER_NAME;" > /dev/null
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $USER_NAME;" > /dev/null
 if [ $? -ne 0 ]; then
     echo 'Could not grant privileges for user to database'
     exit $?
