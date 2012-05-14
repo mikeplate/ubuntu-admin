@@ -36,8 +36,8 @@ fi
 
 # Give user access to database
 if [ -z $FOUND_USER ]; then
-    mysql -D $DB_NAME -e "grant all privileges on *.* to '$USER_NAME'@'localhost' identified by '$USER_PASSWORD'"
+    mysql -e "grant all privileges on $DB_NAME.* to '$USER_NAME'@'localhost' identified by '$USER_PASSWORD'"
 else
-    mysql -D $DB_NAME -e "grant all privileges on *.* to '$USER_NAME'@'localhost'"
+    mysql -e "grant all privileges on $DB_NAME.* to '$USER_NAME'@'localhost'"
 fi
 
