@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Backup all sites and the configuration of nginx to /srv/www/backup directory
+# Backup all sites and the configuration of nginx to /var/backups/nginx/
 
 function do_backup {
     local DIR=$1
@@ -18,7 +18,7 @@ function do_backup {
         echo "Create new backup for $NAME"
         tar -c $DIR | gzip > $BACKUP_FILE
         chown root:root $BACKUP_FILE
-        chmod 700 $BACKUP_FILE
+        chmod 600 $BACKUP_FILE
     else
         echo "Skipping backup for $NAME"
     fi
@@ -49,4 +49,13 @@ for BASE_DIR in /srv/www/*; do
         fi
     fi
 done
+
+do_backup /etc/nginx nginx
+do_backup /var/log/nginx nginx-log
+
+echo "Create new backup for system users"
+BACKUP_FILE=/var/backups/system-users.tar.gz
+tar -c /etc/{passwd,group,shadow} | gzip > $BACKUP_FILE
+chown root:root $BACKUP_FILE
+chmod 600 $BACKUP_FILE
 
