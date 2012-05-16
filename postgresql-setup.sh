@@ -38,9 +38,9 @@ fi
 echo 'Schedule backup'
 cp postgresql-backup.sh /usr/local/sbin/postgresql-backup.sh
 chmod u+x /usr/local/sbin/postgresql-backup.sh
-crontab -l | grep -q postgresql-backup.sh
+crontab -l 2> /dev/null | grep -q postgresql-backup.sh
 if [ $? -ne 0 ]; then
-    crontab -l | (cat; echo '45 23 * * * /usr/local/sbin/postgresql-backup.sh') | crontab -
+    crontab -l 2> /dev/null | (cat; echo '45 23 * * * /usr/local/sbin/postgresql-backup.sh') | crontab -
 fi
 
 # Get version for display purposes
