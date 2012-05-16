@@ -33,6 +33,14 @@ EOF
 chown root:root /root/.my.cnf
 chmod 600 /root/.my.cnf
 
+# Set up backup
+cp mysql-backup.sh /usr/local/sbin/mysql-backup.sh
+chmod u+x /usr/local/sbin/mysql-backup.sh
+crontab -l | grep -q mysql-backup.sh
+if [ $? -ne 0 ]; then
+    crontab -l | (cat; echo '25 23 * * * /usr/local/sbin/mysql-backup.sh') | crontab -
+fi
+
 # Get version for display purposes
 MYSQLVER=$(mysqld --version)
 [[ $MYSQLVER =~ Ver\ ([0-9.]+) ]]
