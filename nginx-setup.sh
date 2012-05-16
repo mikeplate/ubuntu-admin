@@ -117,7 +117,6 @@ if [ $? -ne 0 ]; then
     echo 'Nginx make failed'
     exit $?
 fi
-cp objs/nginx /usr/sbin/nginx
 
 # Setup basic nginx configuration
 if [ ! -d /etc/nginx ]; then
@@ -126,6 +125,7 @@ if [ ! -d /etc/nginx ]; then
     chmod 0770 /etc/nginx
 fi
 cp conf/mime.types /etc/nginx/mime.types
+cd ../../..
 tee /etc/nginx/nginx.conf > /dev/null << EOF
 user www-data;
 worker_processes 2;
@@ -217,16 +217,30 @@ console output
 exec /usr/sbin/nginx -g "daemon off;"
 respawn
 EOF
+
+# Start the nginx service
+current_status=$(status nginx)
+if [[ "$current_status" == *running* ]]; then
+    stop nginx
+fi
+cp tmp/nginx/nginx-$NGINXVER/objs/nginx /usr/sbin/nginx
 start nginx
 if [ $? -ne 0 ]; then
     echo 'Nginx did not start'
     exit
 fi
-cd ../../..
 
 # Create the default web site
 if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default _
+fi
+
+# Set up backup
+cp nginx-backup.sh /usr/local/sbin/nginx-backup.sh
+chmod u+x /usr/local/sbin/nginx-backup.sh
+crontab -l | grep -q nginx-backup.sh
+if [ $? -ne 0 ]; then
+    crontab -l | (cat; echo '0 23 * * * /usr/local/sbin/nginx-backup.sh') | crontab -
 fi
 
 echo "Setup of Nginx version $NGINXVER completed successfully"
