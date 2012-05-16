@@ -76,6 +76,10 @@ server {
     root $DESTDIR/public;
     index index.php index.html;
 
+    location / {
+        try_files \$uri \$uri/ /index.php;
+    }
+
     location ~ .php\$ {
         fastcgi_split_path_info ^(.+\.php)(.*)\$;
         fastcgi_pass unix:$SOCKET_PATH;
