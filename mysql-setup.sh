@@ -8,13 +8,19 @@ if [ "$(id -u)" -ne 0 ]; then
     exit
 fi
 
+# Ask for root password
+read -s -p 'Specify password to set for MySQL root account: '
+echo ''
+
 # Install MySQL
-export DEBIAN_FRONTEND=noninteractive
-apt-get -y install mysql-server
+echo 'Installing MySQL packages'
+DEBIAN_FRONTEND=noninteractive apt-get -yq install mysql-server >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Failed to install mysql-server package'
+    exit $?
+fi
 
 # Set root password
-read -s -p 'Specify password to set for root: '
-echo ''
 mysql -u root << EOF
 update mysql.user set password = password('$REPLY') where user='root';
 flush privileges;
