@@ -40,8 +40,9 @@ chown root:root /root/.my.cnf
 chmod 600 /root/.my.cnf
 
 # Set up backup
+echo 'Schedule backup'
 cp mysql-backup.sh /usr/local/sbin/mysql-backup.sh
-chmod u+x /usr/local/sbin/mysql-backup.sh
+chmod 750 /usr/local/sbin/mysql-backup.sh
 crontab -l 2> /dev/null | grep -q mysql-backup.sh
 if [ $? -ne 0 ]; then
     crontab -l 2> /dev/null | (cat; echo '25 23 * * * /usr/local/sbin/mysql-backup.sh') | crontab -
