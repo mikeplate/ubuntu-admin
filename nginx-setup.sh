@@ -235,12 +235,13 @@ if [ -f ./nginx-add-ruby.sh ]; then
     ./nginx-add-ruby.sh default _
 fi
 
-# Set up backup
-cp nginx-backup.sh /usr/local/sbin/nginx-backup.sh
-chmod u+x /usr/local/sbin/nginx-backup.sh
-crontab -l | grep -q nginx-backup.sh
-if [ $? -ne 0 ]; then
-    crontab -l | (cat; echo '0 23 * * * /usr/local/sbin/nginx-backup.sh') | crontab -
+# Set up backup, assuming scheduling done by ubuntu-setup.sh
+if [ -d /usr/local/backup ]; then
+    echo 'Create backup script'
+    cp nginx-backup.sh /usr/local/backup/nginx-backup.sh
+    chmod 750 /usr/local/backup/nginx-backup.sh
+else
+    echo 'No backup directory found. Backup script not created.'
 fi
 
 echo "Setup of Nginx version $NGINXVER completed successfully"

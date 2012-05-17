@@ -35,12 +35,12 @@ if [ $? -ne 0 ]; then
 fi
 
 # Set up backup
-echo 'Schedule backup'
-cp postgresql-backup.sh /usr/local/sbin/postgresql-backup.sh
-chmod 750 /usr/local/sbin/postgresql-backup.sh
-crontab -l 2> /dev/null | grep -q postgresql-backup.sh
-if [ $? -ne 0 ]; then
-    crontab -l 2> /dev/null | (cat; echo '45 23 * * * /usr/local/sbin/postgresql-backup.sh') | crontab -
+if [ -d /usr/local/backup ]; then
+    echo 'Create backup script'
+    cp postgresql-backup.sh /usr/local/backup/postgresql-backup.sh
+    chmod 750 /usr/local/backup/postgresql-backup.sh
+else
+    echo 'No backup directory found. Backup script not created.'
 fi
 
 # Get version for display purposes
