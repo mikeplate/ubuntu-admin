@@ -148,6 +148,7 @@ http {
     types_hash_max_size 2048;
     server_names_hash_bucket_size 64;
     client_max_body_size 20m;
+    charset utf-8;
 
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
