@@ -18,7 +18,7 @@ fi
 source "${0%/*}/nginx-common.sh"
 
 # Ensure requirements are installed
-apt-get install fastcgi-mono-server2
+apt-get install mono-fastcgi-server4
 
 # Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
@@ -34,7 +34,6 @@ if [ $# -eq 2 ]; then
     SITE_USER=$SUDO_USER
     SITE_GROUP='www-data'
     RUN_AS_USER='www-data'
-    SOCKET_PATH='/var/run/php5-fpm.sock'
 else
     prepare_user $3
 
@@ -42,33 +41,7 @@ else
     SITE_USER=$3
     SITE_GROUP='www-data'
     RUN_AS_USER=$3
-    SOCKET_PATH="/var/run/php5-fpm-$RUN_AS_USER.sock"
-
-    # Create php5-fpm configuration
-    if [ ! -f /etc/php5/fpm/pool.d/$RUN_AS_USER.conf ]; then
-        tee /etc/php5/fpm/pool.d/$RUN_AS_USER.conf > /dev/null << EOF
-[www-$RUN_AS_USER]
-listen = $SOCKET_PATH
-user = $RUN_AS_USER
-group = $SITE_GROUP
-pm = dynamic
-pm.max_children = 2
-pm.start_servers = 1
-pm.min_spare_servers = 1
-pm.max_spare_servers = 1
-EOF
-    /etc/init.d/php5-fpm restart
-    fi
 fi
-
-# Create Mono upstart
-tee /etc/init/mono-$RUN_AS_USER.conf > /dev/null << EOF
-description "Mono ASP.NET for $SITE_NAME"
-start on (filesystem and net-device-up IFACE!=lo)
-stop on runlevel [!2345]
-respawn
-exec su -s /bin/sh -c 'exec "\$0" "\$@" $RUN_AS_USER -- /usr/bin/fastcgi-mono-server2 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:9001
-EOF
 
 # Create destination directories
 if [ -d "$DESTDIR" ]; then
@@ -77,6 +50,15 @@ if [ -d "$DESTDIR" ]; then
 fi
 mkdir -p "$DESTDIR/public"
 mkdir "$DESTDIR/logs"
+
+# Create Mono upstart
+tee /etc/init/mono-$RUN_AS_USER.conf > /dev/null << EOF
+description "Mono ASP.NET for $SITE_NAME"
+start on (filesystem and net-device-up IFACE!=lo)
+stop on runlevel [!2345]
+respawn
+exec su -s /bin/sh -c 'exec "\$0" "\$@" $RUN_AS_USER -- /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:9001
+EOF
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
