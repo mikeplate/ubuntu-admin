@@ -18,7 +18,7 @@ fi
 source "${0%/*}/nginx-common.sh"
 
 # Ensure requirements are installed
-apt-get install mono-fastcgi-server4
+apt-get -yq install mono-fastcgi-server4
 
 # Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
