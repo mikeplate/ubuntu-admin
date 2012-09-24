@@ -18,7 +18,11 @@ fi
 source "${0%/*}/nginx-common.sh"
 
 # Ensure requirements are installed
-apt-get -yq install mono-fastcgi-server4
+apt-get -yq install mono-fastcgi-server4 >> tmp/logfile
+if [ $? -ne 0 ]; then
+    echo 'Could not install Mono'
+    exit
+fi
 
 # Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
@@ -58,7 +62,7 @@ description "Mono ASP.NET for user $RUN_AS_USER"
 start on (filesystem and net-device-up IFACE!=lo)
 stop on runlevel [!2345]
 respawn
-exec sudo -u $RUN_AS_USER /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
+exec start-stop-daemon --start --chuid $RUN_AS_USER --exec /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
 EOF
 start mono-$RUN_AS_USER
 if [ $? -ne 0 ]; then
