@@ -24,6 +24,7 @@ apt-get -yq install mono-fastcgi-server4
 SITENAME=$1
 SITEPORT=${2#*:}
 SITEDOMAIN=${2%:*}
+CGIPORT=9901
 if [ "$SITEPORT" == "$SITEDOMAIN" ]; then
     SITEPORT=80
 fi
@@ -53,11 +54,11 @@ mkdir "$DESTDIR/logs"
 
 # Create Mono upstart
 tee /etc/init/mono-$RUN_AS_USER.conf > /dev/null << EOF
-description "Mono ASP.NET for $SITE_NAME"
+description "Mono ASP.NET for user $RUN_AS_USER"
 start on (filesystem and net-device-up IFACE!=lo)
 stop on runlevel [!2345]
 respawn
-exec su -s /bin/sh -c 'exec "\$0" "\$@" $RUN_AS_USER -- /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:9001
+exec sudo -u $RUN_AS_USER /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
 EOF
 
 # Create nginx configuration
@@ -76,7 +77,7 @@ server {
 
     location ~ .aspx\$ {
         fastcgi_split_path_info ^(.+\.aspx)(.*)\$;
-        fastcgi_pass 127.0.0.1:9001;
+        fastcgi_pass 127.0.0.1:$CGIPORT;
         fastcgi_index index.aspx;
         fastcgi_param SCRIPT_FILENAME $DESTDIR/public\$fastcgi_script_name;
         fastcgi_param SITE_NAME "$SITENAME";
