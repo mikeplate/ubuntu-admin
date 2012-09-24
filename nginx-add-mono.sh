@@ -60,6 +60,10 @@ stop on runlevel [!2345]
 respawn
 exec sudo -u $RUN_AS_USER /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
 EOF
+start mono-$RUN_AS_USER
+if [ $? -ne 0 ]; then
+    echo 'Could not start the Mono FastCGI process. Will continue to create Nginx configuration anyway.'
+fi
 
 # Create nginx configuration
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
@@ -80,7 +84,7 @@ server {
         fastcgi_pass 127.0.0.1:$CGIPORT;
         fastcgi_index index.aspx;
         fastcgi_param SCRIPT_FILENAME $DESTDIR/public\$fastcgi_script_name;
-        fastcgi_param SITE_NAME "$SITENAME";
+        fastcgi_param HTTP_SITE_NAME "$SITENAME";
         include fastcgi_params;
     }
 }
