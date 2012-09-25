@@ -62,7 +62,8 @@ description "Mono ASP.NET for user $RUN_AS_USER"
 start on (filesystem and net-device-up IFACE!=lo)
 stop on runlevel [!2345]
 respawn
-exec start-stop-daemon --start --chuid $RUN_AS_USER --exec /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
+setuid $RUN_AS_USER
+exec /usr/bin/fastcgi-mono-server4 /applications=/:$DESTDIR/public /socket=tcp:127.0.0.1:$CGIPORT
 EOF
 start mono-$RUN_AS_USER
 if [ $? -ne 0 ]; then
