@@ -16,6 +16,10 @@ echo "au BufRead,BufNewFile *.aspx,*.asmx,*.ascx set filetype=aspnet" > ~/.vim/f
 wget https://raw.github.com/vim-ruby/vim-ruby/master/syntax/ruby.vim -O ~/.vim/syntax/ruby.vim
 echo "au BufRead,BufNewFile *.rb,*.ru,Rakefile,rakefile set filetype=ruby" > ~/.vim/ftdetect/ruby.vim
 
+# Nginx Config Syntax
+wget https://github.com/evanmiller/nginx-vim-syntax/raw/master/syntax/nginx.vim -O ~/.vim/syntax/nginx.vim
+echo "au BufRead,BufNewFile *.conf set filetype=nginx" > ~/.vim/ftdetect/nginx.vim
+
 # Ensure autostart script statements
 vimrc_commands=(
     "colorscheme desert"
