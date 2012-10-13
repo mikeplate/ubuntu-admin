@@ -34,6 +34,7 @@ function clone_github {
 clone_github https://github.com/sukima/xmledit.git xmledit
 clone_github https://github.com/othree/html5.vim html5
 clone_github https://github.com/hail2u/vim-css3-syntax.git css3
+clone_github https://github.com/msanders/snipmate.vim snipmate
 
 # Extra support for css3 inside of html files
 if [ ! -d ~/.vim/after/syntax ]; then
