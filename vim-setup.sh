@@ -24,8 +24,52 @@ echo "au BufRead,BufNewFile *.conf set filetype=nginx" > ~/.vim/ftdetect/nginx.v
 wget https://raw.github.com/tpope/vim-pathogen/master/autoload/pathogen.vim -O ~/.vim/autoload/pathogen.vim
 
 # Github projects
-git clone --depth=1 https://github.com/sukima/xmledit.git ~/.vim/bundle/xmledit
-rm -rf ~/.vim/bindle/xmledit/.git
+function clone_github {
+    if [ -d ~/.vim/bundle/$2 ]; then
+        rm -rf ~/.vim/bundle/$2
+    fi
+    git clone --depth=1 $1 ~/.vim/bundle/$2
+    rm -rf ~/.vim/bindle/$2/.git
+}
+clone_github https://github.com/sukima/xmledit.git xmledit
+clone_github https://github.com/othree/html5.vim html5
+clone_github https://github.com/hail2u/vim-css3-syntax.git css3
+
+# Extra support for css3 inside of html files
+if [ ! -d ~/.vim/after/syntax ]; then
+    mkdir -p ~/.vim/after/syntax
+fi
+cat > ~/.vim/after/syntax/html.vim <<EOF
+syn include @htmlCss syntax/css/html5-elements.vim
+syn include @htmlCss syntax/css/css3-animations.vim
+syn include @htmlCss syntax/css/css3-background.vim
+syn include @htmlCss syntax/css/css3-box.vim
+syn include @htmlCss syntax/css/css3-break.vim
+syn include @htmlCss syntax/css/css3-colors.vim
+syn include @htmlCss syntax/css/css3-content.vim
+syn include @htmlCss syntax/css/css3-exclusions.vim
+syn include @htmlCss syntax/css/css3-flexbox.vim
+syn include @htmlCss syntax/css/css3-gcpm.vim
+syn include @htmlCss syntax/css/css3-grid-layout.vim
+syn include @htmlCss syntax/css/css3-hyperlinks.vim
+syn include @htmlCss syntax/css/css3-images.vim
+syn include @htmlCss syntax/css/css3-layout.vim
+syn include @htmlCss syntax/css/css3-linebox.vim
+syn include @htmlCss syntax/css/css3-lists.vim
+syn include @htmlCss syntax/css/css3-marquee.vim
+syn include @htmlCss syntax/css/css3-mediaqueries.vim
+syn include @htmlCss syntax/css/css3-multicol.vim
+syn include @htmlCss syntax/css/css3-preslev.vim
+syn include @htmlCss syntax/css/css3-regions.vim
+syn include @htmlCss syntax/css/css3-ruby.vim
+syn include @htmlCss syntax/css/css3-selectors.vim
+syn include @htmlCss syntax/css/css3-text.vim
+syn include @htmlCss syntax/css/css3-transforms.vim
+syn include @htmlCss syntax/css/css3-transitions.vim
+syn include @htmlCss syntax/css/css3-ui.vim
+syn include @htmlCss syntax/css/css3-values.vim
+syn include @htmlCss syntax/css/css3-writing-modes.vim
+EOF
 
 # Ensure autostart script statements
 vimrc_commands=(
