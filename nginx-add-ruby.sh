@@ -75,7 +75,8 @@ cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 chown -R $SITE_USER:$SITE_GROUP $DESTDIR
 chmod -R 0750 $DESTDIR
 find $DESTDIR -type d -exec chmod 2750 {} \;
-chown $RUN_AS_USER:$SITE_GROUP $DESTDIR/config.ru
+chown $RUN_AS_USER:$SUDO_USER $DESTDIR/config.ru
+chmod g+w $DESTDIR/config.ru
 chmod 0770 $DESTDIR/tmp
 
 # Check that nginx is happy with configuration
