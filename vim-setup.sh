@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ensure directories exist
-vim_dirs=(autoload syntax ftdetect bundle indent, snippets)
+vim_dirs=(autoload syntax ftdetect bundle indent snippets)
 for vimdir in "${vim_dirs[@]}"; do
     if [ ! -d ~/.vim/$vimdir ]; then
         mkdir -p ~/.vim/$vimdir
