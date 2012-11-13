@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ensure directories exist
-vim_dirs=(autoload syntax ftdetect bundle)
+vim_dirs=(autoload syntax ftdetect bundle indent)
 for vimdir in "${vim_dirs[@]}"; do
     if [ ! -d ~/.vim/$vimdir ]; then
         mkdir -p ~/.vim/$vimdir
@@ -34,7 +34,17 @@ function clone_github {
 clone_github https://github.com/sukima/xmledit.git xmledit
 clone_github https://github.com/othree/html5.vim html5
 clone_github https://github.com/hail2u/vim-css3-syntax.git css3
-clone_github https://github.com/msanders/snipmate.vim snipmate
+clone_github https://github.com/vim-scripts/ZoomWin.git zoomwin
+
+# Snipmate and dependencies
+# This is the old one:
+# clone_github https://github.com/msanders/snipmate.vim snipmate
+# This is the new one, but lacking a pull request from mihaifm that caused me errors
+# clone_github https://github.com/garbas/vim-snipmate.git snipmate
+clone_github https://github.com/mihaifm/vim-snipmate/ snipmate
+clone_github https://github.com/tomtom/tlib_vim.git tlib
+clone_github https://github.com/MarcWeber/vim-addon-mw-utils.git mw-utils
+clone_github https://github.com/honza/snipmate-snippets.git snippets
 
 # Extra support for css3 inside of html files
 if [ ! -d ~/.vim/after/syntax ]; then
@@ -72,12 +82,18 @@ syn include @htmlCss syntax/css/css3-values.vim
 syn include @htmlCss syntax/css/css3-writing-modes.vim
 EOF
 
+# Better indentation (?) for JavaScript inside of html
+wget http://web-indent.googlecode.com/svn/trunk/indent/html.vim -O ~/.vim/indent/html.vim
+wget http://web-indent.googlecode.com/svn/trunk/indent/javascript.vim -O ~/.vim/indent/javascript.vim
+
 # Ensure autostart script statements
 vimrc_commands=(
     "colorscheme desert"
     "set tabstop=4 softtabstop=4 shiftwidth=4 expandtab autoindent smartindent"
     "call pathogen#infect()"
     "filetype plugin indent on"
+    "cnoremap e. edit <c-r>=expand(\"%:h\")<cr>/"
+    "cnoreabbrev <expr> W ((getcmdtype() is# ':' && getcmdline() is# 'W')?('w'):('W'))"
 )
 touch ~/.vimrc
 for cmd in "${vimrc_commands[@]}"; do
