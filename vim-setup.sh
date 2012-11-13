@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ensure directories exist
-vim_dirs=(autoload syntax ftdetect bundle indent)
+vim_dirs=(autoload syntax ftdetect bundle indent, snippets)
 for vimdir in "${vim_dirs[@]}"; do
     if [ ! -d ~/.vim/$vimdir ]; then
         mkdir -p ~/.vim/$vimdir
@@ -45,6 +45,7 @@ clone_github https://github.com/mihaifm/vim-snipmate/ snipmate
 clone_github https://github.com/tomtom/tlib_vim.git tlib
 clone_github https://github.com/MarcWeber/vim-addon-mw-utils.git mw-utils
 clone_github https://github.com/honza/snipmate-snippets.git snippets
+wget https://raw.github.com/gist/4065215/4b0d957bc5f881fe8805a8c099594dbdb733d885/html.snippet -O ~/.vim/snippets/html.snippet
 
 # Extra support for css3 inside of html files
 if [ ! -d ~/.vim/after/syntax ]; then
