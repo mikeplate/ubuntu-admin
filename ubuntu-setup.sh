@@ -32,6 +32,7 @@ for FILE_NAME in /usr/local/backup/*-backup.sh; do
     bash \$FILE_NAME 2>> /usr/local/backup/error.log
 done
 EOF
+chmod u+x /usr/local/backup/backup.sh
 
 crontab -l | grep -q /usr/local/backup/backup.sh
 if [ $? -ne 0 ]; then

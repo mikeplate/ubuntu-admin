@@ -16,7 +16,7 @@ function do_backup {
 
     if [[ "$LAST_MOD" > "$BACKUP_MOD" ]]; then
         echo "Create new backup for $NAME"
-        tar -c $DIR | gzip > $BACKUP_FILE
+        tar -zc --exclude=files --exclude=.temp -f $BACKUP_FILE $DIR
         chown root:root $BACKUP_FILE
         chmod 600 $BACKUP_FILE
     else
