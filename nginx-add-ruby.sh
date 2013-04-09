@@ -11,7 +11,7 @@ fi
 
 # Check arguments
 if [ $# -lt 2 ]; then
-    echo 'Syntax: nginx-add-ruby.sh <site-name> <domain>[:<port>] [<user-name>]'
+    echo 'Syntax: nginx-add-ruby.sh <site-name> <domain>[:<port>] [<user-name>] [<dest-dir>]'
     exit
 fi
 
@@ -31,27 +31,39 @@ if [ $# -eq 2 ]; then
     SITE_USER=$SUDO_USER
     SITE_GROUP='www-data'
     RUN_AS_USER='www-data'
-    SOCKET_PATH='/var/run/php5-fpm.sock'
 else
-    prepare_user $3
+    if [ $3 == 'www-data' ]; then
+        DESTDIR=/srv/www/$1
+        SITE_USER=$SUDO_USER
+        SITE_GROUP='www-data'
+        RUN_AS_USER='www-data'
+    else
+        prepare_user $3
+        DESTDIR=$HOMEDIR/$1
+        SITE_USER=$3
+        SITE_GROUP='www-data'
+        RUN_AS_USER=$3
+    fi
 
-    DESTDIR=$HOMEDIR/$1
-    SITE_USER=$3
-    SITE_GROUP='www-data'
-    RUN_AS_USER=$3
+    # Possibly set a specific destination directory for the site
+    if [ $# -eq 4 ]; then
+        DESTDIR=$(readlink -f "$4")
+    fi
 fi
 
 # Create destination directories
-if [ -d "$DESTDIR" ]; then
-    echo "Site directory $DESTDIR already exists. Script will not continue."
-    exit 1
-fi
-mkdir -p "$DESTDIR/public"
-mkdir "$DESTDIR/views"
-mkdir "$DESTDIR/tmp"
-mkdir "$DESTDIR/logs"
+sub_dirs=(public views tmp logs)
+for subdir in "${sub_dirs[@]}"; do
+    if [ ! -d "$DESTDIR/$subdir" ]; then
+        mkdir -p "$DESTDIR/$subdir"
+    fi
+done
 
 # Create nginx configuration
+# Rename any existing file before creating the new one
+if [ -f /etc/nginx/sites/$1.conf ]; then
+    mv /etc/nginx/sites/$1.conf /etc/nginx/sites/$1.conf.old
+fi
 tee /etc/nginx/sites/$1.conf > /dev/null << EOF
 server {
     listen $SITEPORT;
@@ -66,10 +78,23 @@ server {
     passenger_set_cgi_param SITE_NAME "$SITENAME";
 }
 EOF
+
+# If there was an existing file, append it to the configuration with prepended
+# hash characters at the beginning of each row to make them commented out. Only append
+# if the files differ.
+if [ -f /etc/nginx/sites/$1.conf.old ]; then
+    diff --brief /etc/nginx/sites/$1.conf.old /etc/nginx/sites/$1.conf > /dev/null
+    if [ $? -ne 0 ]; then
+        sed -r 's/^.+$/#\0/' /etc/nginx/sites/$1.conf.old >> /etc/nginx/sites/$1.conf
+    fi
+    rm /etc/nginx/sites/$1.conf.old
+fi
+
+# Set permissions for configuration file
 chmod 0660 /etc/nginx/sites/$1.conf
 
-# Copy template files
-cp -R "$(dirname $0)/nginx-ruby-template/." $DESTDIR
+# Copy template files, don't overwrite any existing files
+cp -Rn "$(dirname $0)/nginx-ruby-template/." $DESTDIR
 
 # Set file system properties
 chown -R $SITE_USER:$SITE_GROUP $DESTDIR
