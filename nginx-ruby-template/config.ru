@@ -13,6 +13,7 @@ end
 
 require './app.rb'
 
+require 'debugger'
 require 'rack/debug'
 use Rack::Debug
 
