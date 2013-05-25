@@ -63,7 +63,7 @@ fi
 
 # Install other ruby gems
 echo 'Install some Ruby gems'
-RUBYGEMS=( sinatra sinatra-reloader rack-debug sass json data_mapper )
+RUBYGEMS=( rdoc debugger sinatra sinatra-reloader rack-debug sass json data_mapper )
 for gemname in "${RUBYGEMS[@]}"; do
     gem install $gemname -q >> tmp/logfile
     if [ $? -ne 0 ]; then
