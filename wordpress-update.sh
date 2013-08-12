@@ -74,8 +74,8 @@ rm tmp/wordpress.tar.gz
 chown -R $SITE_USER:$SITE_GROUP $ROOTDIR
 chmod -R 0750 $ROOTDIR
 find $ROOTDIR -type d -exec chmod 2750 {} \;
-chmod -R 0770 $ROOTDIR/wp-content/plugins
-find $ROOTDIR/wp-content/plugins -type d -exec chmod 2770 {} \;
+chmod -R 0770 $ROOTDIR/wp-content
+find $ROOTDIR/wp-content -type d -exec chmod 2770 {} \;
 
 # Apply patches to Wordpress
 # This one removes a replacement of -- when saving post content

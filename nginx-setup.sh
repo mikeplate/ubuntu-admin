@@ -74,7 +74,7 @@ done
 
 # Install packages for php
 echo 'Install php5'
-apt-get install -yq php5 php5-fpm php5-mysql >> tmp/logfile
+apt-get install -yq php5 php5-fpm php5-mysql php5-mcrypt >> tmp/logfile
 if [ $? -ne 0 ]; then
     echo 'Could not install all packages for php'
     exit
