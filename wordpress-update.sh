@@ -44,11 +44,11 @@ echo 'Download and unpack WordPress'
 if [ -d tmp/wordpress ]; then
     rm -rf tmp/wordpress
 fi
-wget -qO tmp/wordpress.tar.gz http://wordpress.org/latest.tar.gz
-if [ $? -ne 0 ]; then
-    echo 'Failed to download latest version of WordPress'
-    exit $?
-fi
+wget --no-check-certificate -O tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz
+#if [ $? -ne 0 ]; then
+#    echo 'Failed to download latest version of WordPress'
+#    exit $?
+#fi
 cd tmp
 tar xf wordpress.tar.gz > logfile
 cd ..
