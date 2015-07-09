@@ -11,6 +11,7 @@ fi
 # Ensure we are up to date
 echo 'Ensure packages are updated and upgraded'
 apt-get -yq update
+apt-get -yq install ntpdate
 apt-get -yq upgrade
 
 # Setup time synchronization
