@@ -3,13 +3,13 @@
 # Set up ASP.NET 5.0 with Mono
 # Source from http://blog.jsinh.in/hosting-asp-net-5-web-application-on-linux/
 
-sudo apt-get -y install make zip unzip curl git libtool autoconf automake build-essential zsh gyp
+sudo apt-get -qq -y install make zip unzip curl git libtool autoconf automake build-essential zsh gyp
 
 # Install Mono
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
 echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
-sudo apt-get update
-sudo apt-get -y install mono-complete
+sudo apt-get -qq update
+sudo apt-get -qq -y install mono-complete
 mono --version
 
 # Prepare som certificates for https downloading
