@@ -23,7 +23,7 @@ fi
 ALL=$(mysql -Bse 'show databases')
 for DB_NAME in $ALL; do
     if [ -f /var/backups/mysql/$DB_NAME.gz ]; then
-        cp /var/backups/mysql/$DB_NAME.gz /var/backups/mysql/$DB_NAME-2.gz
+        mv /var/backups/mysql/$DB_NAME.gz /var/backups/mysql/$DB_NAME-2.gz
     fi
     mysqldump --single-transaction $DB_NAME | gzip > /var/backups/mysql/$DB_NAME.gz
     chown root:root /var/backups/mysql/$DB_NAME.gz
