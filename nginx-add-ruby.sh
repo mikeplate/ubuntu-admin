@@ -75,7 +75,7 @@ server {
 
     passenger_enabled on;
     passenger_friendly_error_pages on;
-    passenger_set_cgi_param SITE_NAME "$SITENAME";
+    passenger_env_var SITE_NAME "$SITENAME";
 }
 EOF
 
