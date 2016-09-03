@@ -55,7 +55,8 @@ if [ $NGINXVER == $USING_NGINXVER -a $PASSENGERVER == $USING_PASSENGERVER ]; the
 fi
 
 # Get the path to the nginx extension for Passenger
-PASSENGERPATH="$(gem content passenger | grep -Ei '/ext/nginx/Configuration.c' | sed 's/\/ext\/nginx\/Configuration.c//')"
+PASSENGERPATH="$(gem content passenger | grep -Ei 'nginx.*/Configuration.c$' | grep -o '^.*passenger[^/]*')"
+
 if [ ${#PASSENGERPATH} -lt 10 ]; then
     echo "Cannot determine Passenger location, path $PASSENGERPATH is too short"
     exit 1
@@ -86,7 +87,7 @@ cd nginx-$NGINXVER
     --with-http_stub_status_module \
     --with-http_gzip_static_module \
     --with-http_ssl_module \
-    --add-module=$PASSENGERPATH/ext/nginx
+    --add-module=$PASSENGERPATH/src/nginx_module
 make
 if [ $? -ne 0 ]; then
     echo 'Failed to make nginx'
