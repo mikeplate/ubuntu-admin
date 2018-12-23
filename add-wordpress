@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# Add Wordpress to an existing php site
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
+
+# Check arguments
+if [ $# -lt 1 ]; then
+    echo 'Syntax: add-wordpress <site-name>'
+    exit
+fi
+
+# Determine site information. Separate domain name and port from second argument.
+SITENAME=$1
+DBNAME=$1
+PASSWORD=$(openssl rand -base64 12)
+PASSWORDREGEX=$(echo $PASSWORD | sed -r 's/\//\\\//g' | sed -r 's/\+/\\\+/g')
+
+# mysql -u root -e "CREATE DATABASE $DBNAME;"
+# mysql -u root -e "CREATE USER '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD';"
+# mysql -u root -e "GRANT ALL ON $DBNAME.* TO '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+
+# Copy Wordpress configuration
+if [ -f /var/www/$SITENAME/wwwroot/wp-config.php ]; then
+    cp /var/www/$SITENAME/wwwroot/wp-config.php /var/www/$SITENAME/wwwroot/wp-config-backup.php
+fi
+cp /var/www/$SITENAME/wwwroot/wp-config-sample.php /var/www/$SITENAME/wwwroot/wp-config.php
+sed -i "s/database_name_here/$DBNAME/" /var/www/$SITENAME/wwwroot/wp-config.php
+sed -i "s/username_here/${DBNAME}user/" /var/www/$SITENAME/wwwroot/wp-config.php
+sed -i "s/password_here/$PASSWORDREGEX/" /var/www/$SITENAME/wwwroot/wp-config.php
+
+SALTS=(AUTH_KEY SECURE_AUTH_KEY LOGGED_IN_KEY NONCE_KEY AUTH_SALT SECURE_AUTH_SALT LOGGED_IN_SALT NONCE_SALT)
+for SALTNAME in "${SALTS[@]}"; do
+    PASSWORD=$(openssl rand -base64 21)
+    PASSWORDREGEX=$(echo $PASSWORD | sed -r 's/\//\\\//g' | sed -r 's/\+/\\\+/g')
+    echo $SALTNAME $PASSWORD $PASSWORDREGEX
+    sed -i -r "s/'${SALTNAME}',\s*'.+'/'${SALTNAME}', '${PASSWORDREGEX}'/" /var/www/$SITENAME/wwwroot/wp-config.php
+done
+

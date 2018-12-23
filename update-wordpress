@@ -10,24 +10,21 @@ fi
 
 # Check arguments
 if [ $# -ne 1 ]; then
-    echo 'Syntax: wordpress-update.sh <site-name>'
+    echo 'Syntax: update-wordpress <site-name>'
     exit
 fi
 
 # Determine site directory and user
 SITENAME=$1
-DESTDIR=/srv/www/$SITENAME
+DESTDIR=/var/www/$SITENAME
 SITE_USER=$SUDO_USER
-if [ ! -d $DESTDIR ]; then
-    DESTDIR=(/srv/www/*/$SITENAME)
-    if [ ! -d $DESTDIR ]; then
-        echo "Site $SITENAME is not found"
-        exit 1
-    fi
-    SITE_USER=$(echo $DESTDIR | awk -F'/' '{print $4}')
-fi
-ROOTDIR=$DESTDIR/public
 SITE_GROUP='www-data'
+ROOTDIR=$DESTDIR/wwwroot
+TEMPDIR=tmp
+if [ ! -d $DESTDIR ]; then
+    echo "Site $SITENAME is not found"
+    exit 1
+fi
 
 # Ensure destination directory exists
 if [ ! -d $ROOTDIR ]; then
@@ -36,6 +33,9 @@ if [ ! -d $ROOTDIR ]; then
 fi
 
 # Check prerequisites
+if [ ! -d $TEMPDIR ]; then
+    mkdir $TEMPDIR
+fi
 echo 'Install required packages'
 apt-get -qy install zip > tmp/logfile
 
@@ -45,17 +45,13 @@ if [ -d tmp/wordpress ]; then
     rm -rf tmp/wordpress
 fi
 wget --no-check-certificate -O tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz
-#if [ $? -ne 0 ]; then
-#    echo 'Failed to download latest version of WordPress'
-#    exit $?
-#fi
 cd tmp
 tar xf wordpress.tar.gz > logfile
 cd ..
 
 # Create backup of current files in directory 
 echo 'Create backup of current files in site'
-BACKUP_DIR='/srv/www/.backups'
+BACKUP_DIR='/var/www/backup'
 if [ ! -d $BACKUP_DIR ]; then
     mkdir $BACKUP_DIR
     chown root:adm $BACKUP_DIR

@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Install applications on Ubuntu system.
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
+
+# Ensure we are up to date
+echo 'Ensure packages are updated and upgraded'
+apt-get -yq update
+apt-get -yq install ntpdate
+apt-get -yq upgrade
+
+# Setup time synchronization
+tee /etc/cron.daily/ntpdate > /dev/null << EOF
+ntpdate ntp.ubuntu.com
+EOF
+chmod 755 /etc/cron.daily/ntpdate
+ntpdate ntp.ubuntu.com
+
+# Install packages
+apt-get -yq install nginx
+apt-get -yq install mariadb-server mariadb-client
+
+echo '=== MySQL Secure Installation ==='
+mysql_secure_installation
+
+
