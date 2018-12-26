@@ -11,10 +11,10 @@ fi
 # Ensure we are up to date
 echo 'Ensure packages are updated and upgraded'
 apt-get -yq update
-apt-get -yq install ntpdate
 apt-get -yq upgrade
 
 # Setup time synchronization
+apt-get -yq install ntpdate
 tee /etc/cron.daily/ntpdate > /dev/null << EOF
 ntpdate ntp.ubuntu.com
 EOF
@@ -28,8 +28,4 @@ apt-get -yq install mariadb-server mariadb-client php7.2-mysql
 # Letsencrypt Certbot
 add-apt-repository -y ppa:certbot/certbot
 apt -y install python-certbot-nginx
-
-echo '=== MySQL Secure Installation ==='
-mysql_secure_installation
-
 
