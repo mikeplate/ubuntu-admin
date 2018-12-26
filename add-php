@@ -92,7 +92,11 @@ fi
 nginx -s reload
 
 # Create Letsencrypt certificate
-certbot certonly --nginx -d $SITEDOMAIN
+if [ $DOTCOUNT -le 1 ]; then
+    certbot certonly --nginx -d $SITEDOMAIN -d www.$SITEDOMAIN
+else
+    certbot certonly --nginx -d $SITEDOMAIN
+fi
 sed -ri "s/listen 80/listen 443 ssl;\n\
     ssl_certificate /etc/letsencrypt/live/$SITEDOMAIN/fullchain.pem;\n\
     ssl_certificate_key /etc/letsencrypt/live/$SITEDOMAIN/privkey.pem;\n\
