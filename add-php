@@ -30,7 +30,7 @@ DESTDIR=/var/www/$1
 SITE_USER='www-data'
 SITE_GROUP='www-data'
 RUN_AS_USER='www-data'
-SOCKET_PATH='/var/run/php7.2-fpm.sock'
+SOCKET_PATH='/var/run/php/php7.2-fpm.sock'
 
 # Create destination directories
 sub_dirs=(wwwroot logs)
@@ -91,5 +91,22 @@ if [ $? -ne 0 ]; then
 fi
 nginx -s reload
 
+# Create Letsencrypt certificate
+certbot certonly --nginx -d $SITEDOMAIN
+sed -ri "s/listen 80/listen 443 ssl;\n\
+    ssl_certificate /etc/letsencrypt/live/$SITEDOMAIN/fullchain.pem;\n\
+    ssl_certificate_key /etc/letsencrypt/live/$SITEDOMAIN/privkey.pem;\n\
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITENAME.conf
+tee >> /etc/nginx/sites-available/$SITENAME.conf <<EOF
+server {
+    if (\$host = $SITEDOMAIN) {
+        return 301 https://\$host\$request_uri;
+    }
+    listen 80;
+    server_name $SITEDOMAIN;
+    return 404;
+}
+EOF
 echo "Created Php site $1 successfully at $DESTDIR"
 

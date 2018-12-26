@@ -10,7 +10,7 @@ fi
 
 # Check arguments
 if [ $# -lt 1 ]; then
-    echo 'Syntax: add-wordpress <site-name>'
+    echo 'Syntax: add-wordpress <site-name> [<domain-name>]'
     exit
 fi
 
@@ -20,9 +20,32 @@ DBNAME=$1
 PASSWORD=$(openssl rand -base64 12)
 PASSWORDREGEX=$(echo $PASSWORD | sed -r 's/\//\\\//g' | sed -r 's/\+/\\\+/g')
 
-# mysql -u root -e "CREATE DATABASE $DBNAME;"
-# mysql -u root -e "CREATE USER '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD';"
-# mysql -u root -e "GRANT ALL ON $DBNAME.* TO '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+# Check if site does not exist
+if [ ! -d /var/www/$1 ]; then
+    if [ $# -lt 2 ]; then
+        echo 'Must specify domain name since site does not exist'
+        exit
+    fi
+    echo "--- Add Php Site ---"
+    ./add-php $1 $2
+fi
+
+# Check if WordPress files does not exist
+if [ ! -f /var/www/$1/wwwroot/wp-config-sample.php ]; then
+    echo "--- Add Wordpress To Site ---"
+    ./update-wordpress $1
+fi
+
+# Check if database exists
+CHECKDB=$(mysql -u root -e "show databases;")
+if [[ $CHECKDB == *"$DBNAME"* ]]; then
+    echo "Database $DBNAME already exists"
+else
+    mysql -u root -e "CREATE DATABASE $DBNAME;"
+fi
+
+mysql -u root -e "CREATE USER '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD';"
+mysql -u root -e "GRANT ALL ON $DBNAME.* TO '${DBNAME}user'@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
 
 # Copy Wordpress configuration
 if [ -f /var/www/$SITENAME/wwwroot/wp-config.php ]; then
@@ -37,7 +60,6 @@ SALTS=(AUTH_KEY SECURE_AUTH_KEY LOGGED_IN_KEY NONCE_KEY AUTH_SALT SECURE_AUTH_SA
 for SALTNAME in "${SALTS[@]}"; do
     PASSWORD=$(openssl rand -base64 21)
     PASSWORDREGEX=$(echo $PASSWORD | sed -r 's/\//\\\//g' | sed -r 's/\+/\\\+/g')
-    echo $SALTNAME $PASSWORD $PASSWORDREGEX
     sed -i -r "s/'${SALTNAME}',\s*'.+'/'${SALTNAME}', '${PASSWORDREGEX}'/" /var/www/$SITENAME/wwwroot/wp-config.php
 done
 

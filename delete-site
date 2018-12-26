@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# Delete a site and all of its files on disk
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit 1
+fi
+
+# Check arguments
+if [ $# -lt 1 ]; then
+    echo 'Syntax: delete-site <site-name>'
+    exit 1
+fi
+
+# Confirm by user
+read -rp "Are you sure you want to delete the site and all of its files? Type yes to confirm: "
+if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
+    exit 1
+fi
+
+# Determine site information
+SITENAME=$1
+
+# Delete existing files
+if [ -f /etc/nginx/sites-enabled/$SITENAME.conf ]; then
+    rm /etc/nginx/sites-enabled/$SITENAME.conf
+fi
+if [ -f /etc/nginx/sites-available/$SITENAME.conf ]; then
+    rm /etc/nginx/sites-available/$SITENAME.conf
+fi
+if [ -d /var/www/$SITENAME ]; then
+    rm -R /var/www/$SITENAME
+fi
+
+# Check that nginx is happy with configuration
+nginx -t
+if [ $? -ne 0 ]; then
+    echo 'Nginx reported error in configuration'
+    exit 1
+fi
+nginx -s reload
+
+# Delete certificate from Letsencrypt
+SITEDOMAIN=$(grep -Pzo "server {\s*?server_name \K(.+?)(?=;)" /etc/nginx/sites-available/$SITENAME.conf)
+certbot delete --cert-name $SITEDOMAIN
+
+echo "Deleted site $SITENAME"
+
