@@ -15,10 +15,12 @@ apt-get -yq upgrade
 
 # Setup time synchronization
 apt-get -yq install ntpdate
-tee /etc/cron.daily/ntpdate > /dev/null << EOF
+if [ ! -f /etc/cron.daily/ntpdate ]; then
+    tee /etc/cron.daily/ntpdate > /dev/null << EOF
 ntpdate ntp.ubuntu.com
 EOF
-chmod 755 /etc/cron.daily/ntpdate
+    chmod 755 /etc/cron.daily/ntpdate
+fi
 ntpdate ntp.ubuntu.com
 
 # Install packages
@@ -28,4 +30,12 @@ apt-get -yq install mariadb-server mariadb-client php7.2-mysql
 # Letsencrypt Certbot
 add-apt-repository -y ppa:certbot/certbot
 apt -y install python-certbot-nginx
+
+# Postfix for local smtp server
+debconf-set-selections <<< "postfix postfix/mailname string mail.apprange.com"
+debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
+apt -y install mailutils
+sed -i "/^inet_interfaces/c\\inet_interfaces = loopback-only" /etc/postfix/main.cf
+sed -i "/^mydestination/c\\mydestination = \$myhostname, localhost.\$mydomain, \$mydomain" /etc/postfix/main.cf
+systemctl restart postfix
 
