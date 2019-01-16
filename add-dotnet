@@ -1,0 +1,138 @@
+#!/bin/bash
+#
+# Add a new site with support for ASP.NET Core
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
+
+# Check arguments
+if [ $# -lt 3 ]; then
+    echo 'Syntax: add-dotnet <site-name> <domain> <local-port>'
+    exit
+fi
+
+# Determine site information
+SITENAME=$1
+SITEDOMAIN=$2
+LOCALPORT=$3
+
+# Check number of dots in domain and use if we should add a www subdomain
+DOTCOUNT=$(awk -F. '{print NF-1}' <<<"$SITEDOMAIN")
+SERVERNAME=$SITEDOMAIN
+if [ $DOTCOUNT -le 1 ]; then
+    SERVERNAME="$SERVERNAME www.$SITEDOMAIN"
+fi
+
+# Determine site directory and user
+DESTDIR=/var/www/$SITENAME
+SITE_USER='www-data'
+SITE_GROUP='www-data'
+SERVICE_PATH='/etc/systemd/system/kestrel-$SITENAME.service'
+
+# Create destination directories
+sub_dirs=(wwwroot logs)
+for subdir in "${sub_dirs[@]}"; do
+    if [ ! -d "$DESTDIR/$subdir" ]; then
+        mkdir -p "$DESTDIR/$subdir"
+    fi
+done
+
+# Create nginx configuration
+# Rename any existing file before creating the new one
+if [ -f /etc/nginx/sites-available/$SITENAME.conf ]; then
+    mv /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-available/$SITENAME.conf.old
+fi
+tee /etc/nginx/sites-available/$SITENAME.conf > /dev/null << EOF
+server {
+    listen 80;
+    server_name $SERVERNAME;
+    access_log $DESTDIR/logs/access.log;
+    error_log $DESTDIR/logs/error.log;
+    root $DESTDIR/wwwroot;
+    index index.html;
+
+    location / {
+        proxy_pass         http://localhost:$LOCALPORT;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade \$http_upgrade;
+        proxy_set_header   Connection keep-alive;
+        proxy_set_header   Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf
+
+# Set permissions for configuration file
+chmod 0660 /etc/nginx/sites/$1.conf
+
+# Copy template files
+cp -R "$(dirname $0)/php-template/." "$DESTDIR/wwwroot"
+
+# Set permissions
+chown -R $SITE_USER:$SITE_GROUP $DESTDIR
+chmod -R 0770 $DESTDIR
+find $DESTDIR -type d -exec chmod 2770 {} \;
+setfacl -d -m u::rwx $DESTDIR
+setfacl -d -m g::rwx $DESTDIR
+setfacl -d -m o::--- $DESTDIR
+
+# Check that nginx is happy with configuration
+nginx -t
+if [ $? -ne 0 ]; then
+    echo 'Nginx reported error in configuration'
+    exit
+fi
+nginx -s reload
+
+# Create systemd service to run the Kestrel host
+tee >> $SERVICE_PATH <<EOF
+[Unit]
+Description=Kestrel host for $SITENAME
+
+[Service]
+WorkingDirectory=$DESTDIR
+ExecStart=/usr/bin/dotnet $DESTDIR/$SITENAME.dll
+Restart=always
+# Restart service after 10 seconds if the dotnet service crashes:
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=dotnet-$SITENAME
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+Environment=ASPNETCORE_URLS=$LOCALPORT
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl start kestrel-$SITENAME.service
+
+# Create Letsencrypt certificate
+if [ $DOTCOUNT -le 1 ]; then
+    certbot certonly --nginx -d $SITEDOMAIN -d www.$SITEDOMAIN
+else
+    certbot certonly --nginx -d $SITEDOMAIN
+fi
+sed -ri "s/listen 80/listen 443 ssl;\n\
+    ssl_certificate /etc/letsencrypt/live/$SITEDOMAIN/fullchain.pem;\n\
+    ssl_certificate_key /etc/letsencrypt/live/$SITEDOMAIN/privkey.pem;\n\
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITENAME.conf
+tee >> /etc/nginx/sites-available/$SITENAME.conf <<EOF
+server {
+    if (\$host = $SITEDOMAIN) {
+        return 301 https://\$host\$request_uri;
+    }
+    listen 80;
+    server_name $SITEDOMAIN;
+    return 404;
+}
+EOF
+echo "Created dotnet site $1 successfully at $DESTDIR"
+
