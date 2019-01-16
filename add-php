@@ -26,10 +26,9 @@ if [ $DOTCOUNT -le 1 ]; then
 fi
 
 # Determine site directory and user
-DESTDIR=/var/www/$1
+DESTDIR=/var/www/$SITENAME
 SITE_USER='www-data'
 SITE_GROUP='www-data'
-RUN_AS_USER='www-data'
 SOCKET_PATH='/var/run/php/php7.2-fpm.sock'
 
 # Create destination directories
@@ -70,7 +69,7 @@ EOF
 ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf
 
 # Set permissions for configuration file
-chmod 0660 /etc/nginx/sites/$1.conf
+chmod 0660 /etc/nginx/sites/$SITENAME.conf
 
 # Copy template files
 cp -R "$(dirname $0)/php-template/." "$DESTDIR/wwwroot"
@@ -112,5 +111,5 @@ server {
     return 404;
 }
 EOF
-echo "Created Php site $1 successfully at $DESTDIR"
+echo "Created hPp site $SITENAME successfully at $DESTDIR"
 
