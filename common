@@ -1,0 +1,49 @@
+#!/bin/bash
+
+function set_site_permissions {
+
+local DEST_DIR=$1
+local SITE_USER=$2
+local SITE_GROUP=$3
+
+chown -R $SITE_USER:$SITE_GROUP $DEST_DIR
+chmod -R 0770 $DEST_DIR
+find $DEST_DIR -type d -exec chmod 2770 {} \;
+setfacl -d -m u::rwx $DEST_DIR
+setfacl -d -m g::rwx $DEST_DIR
+setfacl -d -m o::--- $DEST_DIR
+
+}
+
+
+function create_certificate {
+
+local SITE_NAME=$1
+local SITE_DOMAIN=$2
+local DOT_COUNT=$3
+
+if [ $DOT_COUNT -le 1 ]; then
+	certbot certonly --nginx -d $SITE_DOMAIN -d www.$SITE_DOMAIN
+else
+	certbot certonly --nginx -d $SITE_DOMAIN
+fi
+
+sed -ri "s/listen 80/listen 443 ssl;\n\
+    ssl_certificate \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/fullchain.pem;\n\
+    ssl_certificate_key \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/privkey.pem;\n\
+    include \/etc\/letsencrypt\/options-ssl-nginx.conf;\n\
+    ssl_dhparam \/etc\/letsencrypt\/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITE_NAME.conf
+
+tee >> /etc/nginx/sites-available/$SITE_NAME.conf <<EOF
+server {
+	if (\$host = $SITE_DOMAIN) {
+		return 301 https://\$host\$request_uri;
+	}
+	listen 80;
+	server_name $SITE_DOMAIN;
+	return 404;
+}
+EOF
+nginx -s reload
+
+}

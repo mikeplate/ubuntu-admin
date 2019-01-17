@@ -15,13 +15,19 @@ if [ $# -lt 1 ]; then
 fi
 
 # Confirm by user
-read -rp "Are you sure you want to delete the site and all of its files? Type yes to confirm: "
+read -rp "Are you sure you want to delete the site and all of its files including any database? Type yes to confirm: "
 if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
     exit 1
 fi
 
-# Determine site information
+# Determine site information. Find domain name of site by searching and extracting from nginx configuration.
 SITENAME=$1
+SITEDOMAIN=$(grep -m 1 "server_name" /etc/nginx/sites-available/$SITENAME.conf | grep -Pzo "server_name \K(.+?)(?=;)")
+DBNAME=$SITENAME
+if [ -z "$SITEDOMAIN" ]; then
+    echo "Could not find domain name of site from nginx configuration. Nothing has been deleted!"
+    exit 1
+fi
 
 # Delete existing files
 if [ -f /etc/nginx/sites-enabled/$SITENAME.conf ]; then
@@ -35,15 +41,19 @@ if [ -d /var/www/$SITENAME ]; then
 fi
 
 # Check that nginx is happy with configuration
-nginx -t
+nginx -t 2> /dev/null
 if [ $? -ne 0 ]; then
     echo 'Nginx reported error in configuration'
+    nginx -t
     exit 1
 fi
 nginx -s reload
 
+# Remove possible user and database from MariaDB
+mysql -u root -e "DROP USER IF EXISTS '${DBNAME}user'@'localhost';"
+mysql -u root -e "DROP DATABASE IF EXISTS $DBNAME;"
+
 # Delete certificate from Letsencrypt
-SITEDOMAIN=$(grep -Pzo "server {\s*?server_name \K(.+?)(?=;)" /etc/nginx/sites-available/$SITENAME.conf)
 certbot delete --cert-name $SITEDOMAIN
 
 echo "Deleted site $SITENAME"

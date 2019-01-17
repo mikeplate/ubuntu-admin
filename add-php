@@ -14,6 +14,9 @@ if [ $# -lt 2 ]; then
     exit
 fi
 
+# Include common functions
+source "${0%/*}/common"
+
 # Determine site information. Separate domain name and port from second argument.
 SITENAME=$1
 SITEDOMAIN=$2
@@ -69,18 +72,11 @@ EOF
 ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf
 
 # Set permissions for configuration file
-chmod 0660 /etc/nginx/sites/$SITENAME.conf
+chmod 0660 /etc/nginx/sites-available/$SITENAME.conf
 
-# Copy template files
+# Copy template files and set permissions on site content
 cp -R "$(dirname $0)/php-template/." "$DESTDIR/wwwroot"
-
-# Set permissions
-chown -R $SITE_USER:$SITE_GROUP $DESTDIR
-chmod -R 0770 $DESTDIR
-find $DESTDIR -type d -exec chmod 2770 {} \;
-setfacl -d -m u::rwx $DESTDIR
-setfacl -d -m g::rwx $DESTDIR
-setfacl -d -m o::--- $DESTDIR
+set_site_permissions $DESTDIR $SITE_USER $SITE_GROUP
 
 # Check that nginx is happy with configuration
 nginx -t
@@ -91,25 +87,7 @@ fi
 nginx -s reload
 
 # Create Letsencrypt certificate
-if [ $DOTCOUNT -le 1 ]; then
-    certbot certonly --nginx -d $SITEDOMAIN -d www.$SITEDOMAIN
-else
-    certbot certonly --nginx -d $SITEDOMAIN
-fi
-sed -ri "s/listen 80/listen 443 ssl;\n\
-    ssl_certificate /etc/letsencrypt/live/$SITEDOMAIN/fullchain.pem;\n\
-    ssl_certificate_key /etc/letsencrypt/live/$SITEDOMAIN/privkey.pem;\n\
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITENAME.conf
-tee >> /etc/nginx/sites-available/$SITENAME.conf <<EOF
-server {
-    if (\$host = $SITEDOMAIN) {
-        return 301 https://\$host\$request_uri;
-    }
-    listen 80;
-    server_name $SITEDOMAIN;
-    return 404;
-}
-EOF
-echo "Created hPp site $SITENAME successfully at $DESTDIR"
+create_certificate $SITENAME $SITEDOMAIN $DOTCOUNT
+
+echo "Created php site $SITENAME successfully at $DESTDIR"
 
