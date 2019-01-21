@@ -38,6 +38,11 @@ wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-pr
 dpkg -i packages-microsoft-prod.deb
 apt-get -yq install dotnet-sdk-2.2
 
+# Install Node
+apt -yq install nodejs npm
+npm install -g pm2@latest
+pm2 startup systemd
+
 # Letsencrypt Certbot
 add-apt-repository -y ppa:certbot/certbot
 apt -y install python-certbot-nginx

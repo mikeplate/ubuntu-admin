@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Add a new site with support for ASP.NET Core
+# Add a new site with support for Node.js
 
 # Ensure running as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -10,7 +10,7 @@ fi
 
 # Check arguments
 if [ $# -lt 3 ]; then
-    echo 'Syntax: add-dotnet <site-name> <domain> <local-port>'
+    echo 'Syntax: add-node <site-name> <domain> <local-port>'
     exit
 fi
 
@@ -36,7 +36,7 @@ SITE_GROUP='www-data'
 SERVICE_PATH='/etc/systemd/system/kestrel-$SITENAME.service'
 
 # Create destination directories
-sub_dirs=(wwwroot logs)
+sub_dirs=(public logs)
 for subdir in "${sub_dirs[@]}"; do
     if [ ! -d "$DESTDIR/$subdir" ]; then
         mkdir -p "$DESTDIR/$subdir"
@@ -54,7 +54,7 @@ server {
     server_name $SERVERNAME;
     access_log $DESTDIR/logs/access.log;
     error_log $DESTDIR/logs/error.log;
-    root $DESTDIR/wwwroot;
+    root $DESTDIR/public;
     index index.html;
 
     location /.well-known {
@@ -66,11 +66,9 @@ server {
         proxy_pass         http://localhost:$LOCALPORT;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade \$http_upgrade;
-        proxy_set_header   Connection keep-alive;
+        proxy_set_header   Connection 'upgrade';
         proxy_set_header   Host \$host;
         proxy_cache_bypass \$http_upgrade;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
     }
 }
 EOF
@@ -80,7 +78,7 @@ ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITEN
 chmod 0660 /etc/nginx/sites-available/$1.conf
 
 # Copy template files and set permissions on site content
-cp -R "$(dirname $0)/templates/dotnet/." "$DESTDIR"
+cp -R "$(dirname $0)/templates/node/." "$DESTDIR"
 set_site_permissions $DESTDIR $SITE_USER $SITE_GROUP
 
 # Check that nginx is happy with configuration
@@ -91,32 +89,11 @@ if [ $? -ne 0 ]; then
 fi
 nginx -s reload
 
-# Create systemd service to run the Kestrel host
-tee >> $SERVICE_PATH <<EOF
-[Unit]
-Description=Kestrel host for $SITENAME
-
-[Service]
-WorkingDirectory=$DESTDIR
-ExecStart=/usr/bin/dotnet $DESTDIR/$SITENAME.dll
-Restart=always
-# Restart service after 10 seconds if the dotnet service crashes:
-RestartSec=10
-KillSignal=SIGINT
-SyslogIdentifier=dotnet-$SITENAME
-User=www-data
-Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
-Environment=ASPNETCORE_URLS=http://localhost:$LOCALPORT
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl enable kestrel-$SITENAME.service
-systemctl start kestrel-$SITENAME.service
+# Configure PM2 to run the process
+pm2 start $DESTDIR/app.js --name $SITENAME
 
 # Create Letsencrypt certificate
 create_certificate $SITENAME $SITEDOMAIN $DOTCOUNT
 
-echo "Created dotnet site $SITENAME successfully at $DESTDIR"
+echo "Created node site $SITENAME successfully at $DESTDIR"
 

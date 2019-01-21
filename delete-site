@@ -29,6 +29,17 @@ if [ -z "$SITEDOMAIN" ]; then
     exit 1
 fi
 
+# Delete systemd service for dotnet applications
+if [ -f /etc/systemd/system/kestrel-$SITENAME.service ]; then
+    systemctl stop kestrel-$SITENAME.service
+    rm /etc/systemd/system/kestrel-$SITENAME.service
+fi
+
+# Delete pm2 app for node applications
+if [ -f /var/www/$SITENAME/app.js ]; then
+    pm2 delete $SITENAME
+fi
+
 # Delete existing files
 if [ -f /etc/nginx/sites-enabled/$SITENAME.conf ]; then
     rm /etc/nginx/sites-enabled/$SITENAME.conf
