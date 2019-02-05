@@ -1,0 +1,80 @@
+#!/bin/bash
+#
+# Add a new site for static files only
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
+
+# Check arguments
+if [ $# -lt 2 ]; then
+    echo 'Syntax: add-site <site-name> <domain>'
+    exit
+fi
+
+# Include common functions
+source "${0%/*}/common"
+
+# Determine site information. Separate domain name and port from second argument.
+SITENAME=$1
+SITEDOMAIN=$2
+
+# Check number of dots in domain and use if we should add a www subdomain
+DOTCOUNT=$(awk -F. '{print NF-1}' <<<"$SITEDOMAIN")
+SERVERNAME=$SITEDOMAIN
+if [ $DOTCOUNT -le 1 ]; then
+    SERVERNAME="$SERVERNAME www.$SITEDOMAIN"
+fi
+
+# Determine site directory and user
+DESTDIR=/var/www/$SITENAME
+SITE_USER='www-data'
+SITE_GROUP='www-data'
+
+# Create destination directories
+sub_dirs=(wwwroot logs)
+for subdir in "${sub_dirs[@]}"; do
+    if [ ! -d "$DESTDIR/$subdir" ]; then
+        mkdir -p "$DESTDIR/$subdir"
+    fi
+done
+
+# Create nginx configuration
+# Rename any existing file before creating the new one
+if [ -f /etc/nginx/sites-available/$SITENAME.conf ]; then
+    mv /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-available/$SITENAME.conf.old
+fi
+tee /etc/nginx/sites-available/$SITENAME.conf > /dev/null << EOF
+server {
+    listen 80;
+    server_name $SERVERNAME;
+    access_log $DESTDIR/logs/access.log;
+    error_log $DESTDIR/logs/error.log;
+    root $DESTDIR/wwwroot;
+    index index.html;
+}
+EOF
+ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf
+
+# Set permissions for configuration file
+chmod 0660 /etc/nginx/sites-available/$SITENAME.conf
+
+# Copy template files and set permissions on site content
+cp -R "$(dirname $0)/site-template/." "$DESTDIR/wwwroot"
+set_site_permissions $DESTDIR $SITE_USER $SITE_GROUP
+
+# Check that nginx is happy with configuration
+nginx -t
+if [ $? -ne 0 ]; then
+    echo 'Nginx reported error in configuration'
+    exit
+fi
+nginx -s reload
+
+# Create Letsencrypt certificate
+create_certificate $SITENAME $SITEDOMAIN $DOTCOUNT
+
+echo "Created static site $SITENAME successfully at $DESTDIR"
+
