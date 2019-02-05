@@ -28,11 +28,16 @@ else
 	certbot certonly --nginx -d $SITE_DOMAIN
 fi
 
+if [ $? -ne 0 ]; then
+    echo 'Could not create certificate. HTTPS not configured for site.'
+    return
+fi
+
 sed -ri "s/listen 80/listen 443 ssl;\n\
-    ssl_certificate \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/fullchain.pem;\n\
-    ssl_certificate_key \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/privkey.pem;\n\
-    include \/etc\/letsencrypt\/options-ssl-nginx.conf;\n\
-    ssl_dhparam \/etc\/letsencrypt\/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITE_NAME.conf
+	ssl_certificate \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/fullchain.pem;\n\
+	ssl_certificate_key \/etc\/letsencrypt\/live\/$SITE_DOMAIN\/privkey.pem;\n\
+	include \/etc\/letsencrypt\/options-ssl-nginx.conf;\n\
+	ssl_dhparam \/etc\/letsencrypt\/ssl-dhparams.pem/" /etc/nginx/sites-available/$SITE_NAME.conf
 
 tee >> /etc/nginx/sites-available/$SITE_NAME.conf <<EOF
 server {
@@ -45,5 +50,4 @@ server {
 }
 EOF
 nginx -s reload
-
 }
