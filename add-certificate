@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# Add a new certificate to an existing web site - usually when domain name have been changed or added manually
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit
+fi
+
+# Check arguments
+if [ $# -lt 2 ]; then
+    echo 'Syntax: add-certificate <site-name> <domain>'
+    exit
+fi
+
+# Include common functions
+source "${0%/*}/common"
+
+# Determine site information. Separate domain name and port from second argument.
+SITENAME=$1
+SITEDOMAIN=$2
+
+# Check number of dots in domain and use if we should add a www subdomain
+DOTCOUNT=$(awk -F. '{print NF-1}' <<<"$SITEDOMAIN")
+SERVERNAME=$SITEDOMAIN
+if [ $DOTCOUNT -le 1 ]; then
+    SERVERNAME="$SERVERNAME www.$SITEDOMAIN"
+fi
+
+# Create Letsencrypt certificate
+create_certificate $SITENAME $SITEDOMAIN $DOTCOUNT
+
+echo "Created certificate for site $SITENAME"
+
