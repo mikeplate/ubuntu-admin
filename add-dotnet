@@ -33,7 +33,7 @@ fi
 DESTDIR=/var/www/$SITENAME
 SITE_USER='www-data'
 SITE_GROUP='www-data'
-SERVICE_PATH='/etc/systemd/system/kestrel-$SITENAME.service'
+SERVICE_PATH=/etc/systemd/system/kestrel-$SITENAME.service
 
 # Create destination directories
 sub_dirs=(wwwroot logs)

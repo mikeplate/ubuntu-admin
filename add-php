@@ -55,6 +55,7 @@ server {
     error_log $DESTDIR/logs/error.log;
     root $DESTDIR/wwwroot;
     index index.php index.html;
+    client_max_body_size 20M;
 
     location / {
         try_files \$uri \$uri/ /index.php$is_args$args;

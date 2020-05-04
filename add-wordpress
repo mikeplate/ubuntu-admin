@@ -55,7 +55,7 @@ cp /var/www/$SITENAME/wwwroot/wp-config-sample.php /var/www/$SITENAME/wwwroot/wp
 sed -i "s/database_name_here/$DBNAME/" /var/www/$SITENAME/wwwroot/wp-config.php
 sed -i "s/username_here/${DBNAME}user/" /var/www/$SITENAME/wwwroot/wp-config.php
 sed -i "s/password_here/$PASSWORDREGEX/" /var/www/$SITENAME/wwwroot/wp-config.php
-echo "\ndefine('FS_METHOD','direct');" >> /var/www/$SITENAME/wwwroot/wp-config.php
+echo -e "\ndefine('FS_METHOD','direct');" >> /var/www/$SITENAME/wwwroot/wp-config.php
 
 SALTS=(AUTH_KEY SECURE_AUTH_KEY LOGGED_IN_KEY NONCE_KEY AUTH_SALT SECURE_AUTH_SALT LOGGED_IN_SALT NONCE_SALT)
 for SALTNAME in "${SALTS[@]}"; do
