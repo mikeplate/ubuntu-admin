@@ -26,6 +26,7 @@ ntpdate ntp.ubuntu.com
 # Install packages
 apt-get -yq install nginx
 apt-get -yq install mariadb-server mariadb-client php7.2-mysql
+apt-get -yq install php7.2-mbstring php7.2-dom
 
 # Configure nginx
 sed -ri "s/http \{/http \{\n\tclient_max_body_size 50M;/" /etc/nginx/nginx.conf
