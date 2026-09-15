@@ -32,8 +32,19 @@ fi
 # Delete systemd service for dotnet applications
 if [ -f /etc/systemd/system/kestrel-$SITENAME.service ]; then
     systemctl stop kestrel-$SITENAME.service
+    systemctl disable kestrel-$SITENAME.service
     rm /etc/systemd/system/kestrel-$SITENAME.service
+    systemctl daemon-reload
 fi
+
+# Delete dedicated system user and log directory created by add-dotnet
+if id -u "site-$SITENAME" > /dev/null 2>&1; then
+    userdel "site-$SITENAME"
+fi
+if [ -d /var/log/dotnet-sites/$SITENAME ]; then
+    rm -R /var/log/dotnet-sites/$SITENAME
+fi
+rm -f /var/log/nginx/$SITENAME-access.log /var/log/nginx/$SITENAME-error.log
 
 # Delete pm2 app for node applications
 if [ -f /var/www/$SITENAME/app.js ]; then

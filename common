@@ -16,6 +16,34 @@ setfacl -d -m o::--- $DEST_DIR
 }
 
 
+function create_site_user {
+
+local SITE_USER=$1
+local HOME_DIR=$2
+
+if id -u "$SITE_USER" > /dev/null 2>&1; then
+	return 0
+fi
+
+useradd --system --no-create-home --home-dir "$HOME_DIR" --shell /usr/sbin/nologin "$SITE_USER"
+
+}
+
+
+function find_free_port {
+
+local PORT=${1:-5000}
+
+while ss -Htln 2>/dev/null | awk '{print $4}' | grep -q ":$PORT\$" \
+	|| grep -rq "ASPNETCORE_URLS=http://127.0.0.1:$PORT\$" /etc/systemd/system/kestrel-*.service 2>/dev/null; do
+	PORT=$((PORT + 1))
+done
+
+echo $PORT
+
+}
+
+
 function create_certificate {
 
 local SITE_NAME=$1
