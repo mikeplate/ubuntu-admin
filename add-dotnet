@@ -1,26 +1,54 @@
 #!/bin/bash
 #
-# Add a new site with support for ASP.NET Core
+# Add a new web site running an ASP.NET Core application behind Nginx,
+# isolated under its own dedicated system user, with an automatic
+# Let's Encrypt certificate.
 
 # Ensure running as root
 if [ "$(id -u)" -ne 0 ]; then
     echo 'This script is designed to run as root'
-    exit
+    exit 1
 fi
 
 # Check arguments
-if [ $# -lt 3 ]; then
-    echo 'Syntax: add-dotnet <site-name> <domain> <local-port>'
-    exit
+if [ $# -lt 2 ]; then
+    echo 'Syntax: add-dotnet <folder-name> <domain>'
+    exit 1
 fi
 
-# Include common functions
-source "${0%/*}/common"
+SCRIPT_DIR="$(cd "${0%/*}" && pwd)"
 
 # Determine site information
 SITENAME=$1
 SITEDOMAIN=$2
-LOCALPORT=$3
+
+if [[ ! $SITENAME =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    echo 'Folder name must contain only lowercase letters, digits and hyphens, and start with a letter or digit'
+    exit 1
+fi
+
+DESTDIR=/var/www/$SITENAME
+APPDIR=$DESTDIR/app
+LOGDIR=/var/log/dotnet-sites/$SITENAME
+SITEUSER=site-$SITENAME
+SERVICE_NAME=kestrel-$SITENAME
+SERVICE_PATH=/etc/systemd/system/$SERVICE_NAME.service
+
+if [ -e "$SERVICE_PATH" ]; then
+    echo "A dotnet site named $SITENAME already exists ($SERVICE_PATH). Use delete-site first if you want to recreate it."
+    exit 1
+fi
+
+# Ensure nginx, the ASP.NET Core hosting bundle and certbot are installed and
+# configured. Safe to re-run - it only performs steps that are not already done.
+"$SCRIPT_DIR/install-web"
+if [ $? -ne 0 ]; then
+    echo 'install-web failed, aborting'
+    exit 1
+fi
+
+# Include common functions
+source "$SCRIPT_DIR/common"
 
 # Check number of dots in domain and use if we should add a www subdomain
 DOTCOUNT=$(awk -F. '{print NF-1}' <<<"$SITEDOMAIN")
@@ -29,19 +57,30 @@ if [ $DOTCOUNT -le 1 ]; then
     SERVERNAME="$SERVERNAME www.$SITEDOMAIN"
 fi
 
-# Determine site directory and user
-DESTDIR=/var/www/$SITENAME
-SITE_USER='www-data'
-SITE_GROUP='www-data'
-SERVICE_PATH=/etc/systemd/system/kestrel-$SITENAME.service
+LOCALPORT=$(find_free_port 5000)
 
-# Create destination directories
-sub_dirs=(wwwroot logs)
-for subdir in "${sub_dirs[@]}"; do
-    if [ ! -d "$DESTDIR/$subdir" ]; then
-        mkdir -p "$DESTDIR/$subdir"
-    fi
-done
+echo "Creating dotnet site '$SITENAME' for domain '$SITEDOMAIN' on local port $LOCALPORT"
+
+# Create a dedicated, unprivileged system user for this site so that sites
+# on the same server cannot access each other's files or processes
+if ! create_site_user "$SITEUSER" "$DESTDIR"; then
+    echo "Could not create system user $SITEUSER"
+    exit 1
+fi
+
+# Create destination directories. The published application is deployed by
+# you into $APPDIR (e.g. via 'dotnet publish' + rsync/scp) - nothing is
+# copied here since the app is built outside of this server.
+mkdir -p "$APPDIR"
+mkdir -p "$LOGDIR"
+
+# Site directory and its own log directory are only accessible to the site's
+# dedicated user - nginx only reverse-proxies to it and never reads its files
+chown -R "$SITEUSER:$SITEUSER" "$DESTDIR"
+chmod 0750 "$DESTDIR"
+find "$DESTDIR" -type d -exec chmod 0750 {} \;
+chown -R "$SITEUSER:$SITEUSER" "$LOGDIR"
+chmod 0750 "$LOGDIR"
 
 # Create nginx configuration
 # Rename any existing file before creating the new one
@@ -51,72 +90,97 @@ fi
 tee /etc/nginx/sites-available/$SITENAME.conf > /dev/null << EOF
 server {
     listen 80;
+    listen [::]:80;
     server_name $SERVERNAME;
-    access_log $DESTDIR/logs/access.log;
-    error_log $DESTDIR/logs/error.log;
-    root $DESTDIR/wwwroot;
-    index index.html;
 
-    location /.well-known {
-        default_type "text/plain";
-        allow all;
-    }
+    access_log /var/log/nginx/$SITENAME-access.log;
+    error_log  /var/log/nginx/$SITENAME-error.log;
+
+    include snippets/security-headers.conf;
 
     location / {
-        proxy_pass         http://localhost:$LOCALPORT;
+        proxy_pass         http://127.0.0.1:$LOCALPORT;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade \$http_upgrade;
-        proxy_set_header   Connection keep-alive;
+        proxy_set_header   Connection \$connection_upgrade;
         proxy_set_header   Host \$host;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header   X-Real-IP \$remote_addr;
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
     }
 }
 EOF
 ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf
-
-# Set permissions for configuration file
-chmod 0660 /etc/nginx/sites-available/$1.conf
-
-# Copy template files and set permissions on site content
-cp -R "$(dirname $0)/templates/dotnet/." "$DESTDIR"
-set_site_permissions $DESTDIR $SITE_USER $SITE_GROUP
+chmod 0644 /etc/nginx/sites-available/$SITENAME.conf
 
 # Check that nginx is happy with configuration
 nginx -t
 if [ $? -ne 0 ]; then
     echo 'Nginx reported error in configuration'
-    exit
+    exit 1
 fi
 nginx -s reload
 
-# Create systemd service to run the Kestrel host
-tee >> $SERVICE_PATH <<EOF
+# Create systemd service to run the Kestrel host as the dedicated site user,
+# with sandboxing so a compromised app cannot affect the rest of the system
+tee "$SERVICE_PATH" > /dev/null << EOF
 [Unit]
 Description=Kestrel host for $SITENAME
+After=network.target
 
 [Service]
-WorkingDirectory=$DESTDIR
-ExecStart=/usr/bin/dotnet $DESTDIR/$SITENAME.dll
-Restart=always
-# Restart service after 10 seconds if the dotnet service crashes:
+WorkingDirectory=$APPDIR
+ExecStart=/usr/bin/dotnet $APPDIR/$SITENAME.dll
+Restart=on-failure
 RestartSec=10
 KillSignal=SIGINT
-SyslogIdentifier=dotnet-$SITENAME
-User=www-data
+SyslogIdentifier=$SERVICE_NAME
+User=$SITEUSER
+Group=$SITEUSER
+EnvironmentFile=-$DESTDIR/site.env
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
-Environment=ASPNETCORE_URLS=http://localhost:$LOCALPORT
+Environment=ASPNETCORE_URLS=http://127.0.0.1:$LOCALPORT
+
+# Sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=$DESTDIR $LOGDIR
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
 
 [Install]
 WantedBy=multi-user.target
 EOF
-systemctl enable kestrel-$SITENAME.service
-systemctl start kestrel-$SITENAME.service
+
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME.service" > /dev/null
+
+if [ -f "$APPDIR/$SITENAME.dll" ]; then
+    systemctl restart "$SERVICE_NAME.service"
+else
+    echo "No application deployed yet at $APPDIR/$SITENAME.dll - service enabled but not started."
+fi
 
 # Create Letsencrypt certificate
 create_certificate $SITENAME $SITEDOMAIN $DOTCOUNT
 
-echo "Created dotnet site $SITENAME successfully at $DESTDIR"
-
+echo
+echo "Created dotnet site $SITENAME successfully"
+echo "  Domain:        $SITEDOMAIN"
+echo "  Site user:     $SITEUSER"
+echo "  App directory: $APPDIR (deploy your 'dotnet publish' output here as $SITENAME.dll)"
+echo "  Local port:    127.0.0.1:$LOCALPORT"
+echo "  Service:       systemctl status $SERVICE_NAME"
+echo "  Logs:          journalctl -u $SERVICE_NAME -f"

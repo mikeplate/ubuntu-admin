@@ -1,0 +1,123 @@
+#!/bin/bash
+#
+# Base one-time install and configuration of Nginx, the ASP.NET Core hosting
+# bundle and Certbot (Let's Encrypt) for hosting ASP.NET Core web sites.
+#
+# This script is idempotent - it is safe to run every time before adding a
+# site (add-dotnet does this automatically). Every step checks whether it is
+# already done before making changes.
+
+# Ensure running as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script is designed to run as root'
+    exit 1
+fi
+
+echo '==> Updating package index'
+apt-get -yq update > /dev/null
+
+# Ubuntu ships .NET packages in the universe component - make sure it is enabled
+if ! apt-cache policy 2>/dev/null | grep -q universe; then
+    echo '==> Enabling universe repository'
+    add-apt-repository -y universe > /dev/null
+    apt-get -yq update > /dev/null
+fi
+
+# --- Nginx -------------------------------------------------------------------
+if ! command -v nginx > /dev/null 2>&1; then
+    echo '==> Installing nginx'
+    apt-get -yq install nginx
+else
+    echo '==> nginx already installed'
+fi
+systemctl enable --now nginx > /dev/null
+
+# Allow larger request bodies by default (e.g. file uploads)
+if ! grep -q 'client_max_body_size' /etc/nginx/nginx.conf; then
+    echo '==> Configuring nginx client_max_body_size'
+    sed -ri 's/http \{/http {\n\tclient_max_body_size 50M;/' /etc/nginx/nginx.conf
+fi
+
+# Recommended baseline security headers, available to any site via 'include snippets/security-headers.conf;'
+mkdir -p /etc/nginx/snippets
+if [ ! -f /etc/nginx/snippets/security-headers.conf ]; then
+    echo '==> Adding recommended security headers snippet'
+    tee /etc/nginx/snippets/security-headers.conf > /dev/null << 'EOF'
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+EOF
+fi
+
+# Map used to correctly proxy WebSocket connections (e.g. SignalR, Blazor Server)
+if [ ! -f /etc/nginx/conf.d/connection-upgrade.conf ]; then
+    echo '==> Adding websocket connection upgrade map'
+    tee /etc/nginx/conf.d/connection-upgrade.conf > /dev/null << 'EOF'
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+EOF
+    nginx -t && systemctl reload nginx
+fi
+
+# --- ASP.NET Core hosting bundle ----------------------------------------------
+# Use whichever aspnetcore-runtime package Ubuntu currently ships as latest -
+# Microsoft's guidance for Ubuntu is to install .NET from Ubuntu's own
+# repository rather than Microsoft's package feed.
+DOTNET_VERSION=$(apt-cache search '^aspnetcore-runtime-[0-9]' 2>/dev/null | awk '{print $1}' | sed -E 's/^aspnetcore-runtime-//' | sort -V | tail -1)
+if [ -z "$DOTNET_VERSION" ]; then
+    echo 'Could not find an aspnetcore-runtime package via apt-cache search. Aborting.' >&2
+    exit 1
+fi
+if ! dpkg -s "aspnetcore-runtime-$DOTNET_VERSION" > /dev/null 2>&1; then
+    echo "==> Installing ASP.NET Core runtime $DOTNET_VERSION"
+    apt-get -yq install "aspnetcore-runtime-$DOTNET_VERSION"
+else
+    echo "==> ASP.NET Core runtime $DOTNET_VERSION already installed"
+fi
+
+# --- Certbot (Let's Encrypt) ---------------------------------------------------
+# Certbot's own recommendation is to install via snap rather than the old
+# certbot PPA, which is deprecated and no longer maintained.
+if ! command -v snap > /dev/null 2>&1; then
+    echo '==> Installing snapd'
+    apt-get -yq install snapd
+fi
+if ! snap list core > /dev/null 2>&1; then
+    echo '==> Installing snapd core'
+    snap install core
+fi
+snap refresh core > /dev/null 2>&1
+if ! snap list certbot > /dev/null 2>&1; then
+    echo '==> Installing certbot'
+    snap install --classic certbot
+fi
+ln -sf /snap/bin/certbot /usr/bin/certbot
+
+# Reload nginx automatically whenever a certificate is renewed, since nginx
+# does not pick up renewed certificate files on its own
+mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh > /dev/null << 'EOF'
+#!/bin/bash
+systemctl reload nginx
+EOF
+chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+
+# --- Firewall ------------------------------------------------------------------
+if command -v ufw > /dev/null 2>&1; then
+    echo '==> Configuring firewall for SSH, HTTP and HTTPS'
+    ufw allow OpenSSH > /dev/null
+    ufw allow 'Nginx Full' > /dev/null
+    if ufw status | grep -q '^Status: inactive'; then
+        ufw --force enable > /dev/null
+    fi
+fi
+
+# --- Base directories ------------------------------------------------------------
+mkdir -p /var/www
+chmod 0755 /var/www
+mkdir -p /var/log/dotnet-sites
+chmod 0755 /var/log/dotnet-sites
+
+echo '==> install-web complete'
